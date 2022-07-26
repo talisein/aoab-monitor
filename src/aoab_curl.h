@@ -27,8 +27,7 @@ using curlslistp = std::unique_ptr<struct curl_slist, CURLSListDeleter>;
 class curl
 {
 public:
-curl(curlp&& p) : _p(std::move(p)) {};
-    ~curl() = default;
+    curl() : _p(curl_easy_init()) {};
 
     template<typename T>
     int get_info(CURLINFO info, T&& val)
@@ -43,8 +42,19 @@ curl(curlp&& p) : _p(std::move(p)) {};
         return 0;
     }
 
+    template<typename T>
+    int setopt(CURLoption option, T&& param) {
+        auto code = curl_easy_setopt(_p.get(), option, std::forward<T>(param));
+        if (CURLE_OK != code) [[unlikely]] {
+            const char *estr = curl_easy_strerror(code);
+            std::clog << "Error: Curl errorcode " << code << ": " << estr << '\n';
+            return -1;
+        }
 
-    CURLcode curl_perform();
+        return 0;
+    }
+
+    CURLcode perform();
 
 private:
     curlp _p;

@@ -25,7 +25,7 @@ void CURLSListDeleter::operator()(struct curl_slist* list) const
     curl_slist_free_all(list);
 }
 
-CURLcode curl::curl_perform()
+CURLcode curl::perform()
 {
     CURLcode res = curl_easy_perform(_p.get());
     if (CURLE_OK != res) [[unlikely]] {
@@ -79,7 +79,7 @@ CURLcode curl::curl_perform()
         get_info(CURLINFO_TOTAL_TIME, &total_time);
         std::cout << "Curl success. " << response_code << " " << url << " "
            << downloaded << "B down " << uploaded << "B up in "
-           << total_time << "s";
+           << total_time << "s\n";
     }
 
     return res;
