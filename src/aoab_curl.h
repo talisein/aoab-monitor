@@ -54,6 +54,10 @@ public:
         return 0;
     }
 
+    void reset() {
+        curl_easy_reset(_p.get());
+    }
+
     CURLcode perform();
 
 private:

@@ -1,5 +1,47 @@
 syntax = "proto3";
 
+message library_response {
+    repeated book books = 1;
+    pagination pagination = 2;
+}
+
+message book {
+    string legacyId = 1;
+    volume volume = 2;
+    timestamp purchased = 3;
+    timestamp lastDownload = 4;
+    timestamp lastUpdated = 6;
+    repeated download downloads = 7;
+    enum status_type {
+        UNKNOWN = 0;
+        PREORDER = 1;
+        READY = 4;
+    };
+    status_type status = 8;
+}
+
+message download {
+    string link = 1;
+    enum download_type {
+        UNKNOWN = 0;
+        EPUB = 1;
+    };
+    download_type type = 2;
+    string label = 3;
+}
+
+message login_request {
+    string username = 1;
+    string password = 2;
+    bool slim = 3;
+}
+
+message login_response {
+    string token = 1;
+    int32 duration = 2;
+    timestamp since = 3;
+}
+
 message volumes_response {
     repeated volume volumes = 1;
     pagination pagination = 2;
@@ -37,7 +79,9 @@ message creator {
         AUTHOR = 1;
         TRANSLATOR = 2;
         EDITOR = 3;
+        ARTIST = 4;
         ILLUSTRATOR = 5;
+        LETTERER = 6;
     };
     role_type role = 2;
     string originalName = 3;
