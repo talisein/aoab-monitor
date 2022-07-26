@@ -4,7 +4,6 @@
 #include <streambuf>
 #include <ranges>
 #include <locale>
-#include <google/protobuf/dynamic_message.h>
 #include "aoab_curl.h"
 #include "defs.pb.h"
 
