@@ -41,7 +41,7 @@ do_login(curl &c)
     std::stringstream ss_out, ss_in;
     const char *username = getenv("JNC_USERNAME");
     const char *password = getenv("JNC_PASSWORD");
-    if (nullptr == username || nullptr == password) {
+    if (nullptr == username || nullptr == password || 0 == strlen(username) || 0 == strlen(password)) {
         std::cerr << "Environment variables JNC_USERNAME and JNC_PASSWORD must be set.\n";
         exit(1);
     }
