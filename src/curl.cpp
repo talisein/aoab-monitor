@@ -77,9 +77,9 @@ CURLcode curl::perform()
         get_info(CURLINFO_PRIMARY_PORT, &port);
         double total_time {0.0};
         get_info(CURLINFO_TOTAL_TIME, &total_time);
-/*        std::clog << "\nCurl success. " << response_code << " " << url << " "
+        std::clog << "\nCurl success. " << response_code << " " << url << " "
            << downloaded << "B down " << uploaded << "B up in "
-           << total_time << "s\n";*/
+           << total_time << "s\n";
     }
 
     return res;
