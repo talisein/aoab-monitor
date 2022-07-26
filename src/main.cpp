@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
         }
     }
     std::cout << "{\n";
-    std::ranges::sort(v, std::ranges::greater{}, &data::updated);
+    std::ranges::sort(v, std::ranges::less{}, &data::updated);
     auto first = true;
     for (const auto &d : v) {
         if (first) {
