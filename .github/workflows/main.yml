@@ -68,7 +68,7 @@ jobs:
           username: ${{ secrets.GMAIL_USERNAME }}
           password: ${{ secrets.GMAIL_PASSWORD }}
           # email subject
-          subject: AOAB-Monitor: epub update
+          subject: 'AOAB-Monitor: epub update'
           # email body as text
           body: ${{ github.repository }} sees an update to Ascendence of a Bookworm in ${{ github.job }}
           # comma-separated string, send email to
