@@ -1,11 +1,17 @@
 aoab-monitor
 ============
+[![CI](https://github.com/talisein/aoab-monitor/actions/workflows/main.yml/badge.svg)](https://github.com/talisein/aoab-monitor/actions/workflows/main.yml)
 
 This is a simple tool that queries the [J-Novel Club](https://j-novel.club) API
 and fetches all the lastUpdated fields for Ascendence of a Bookworm epubs.
 
-The idea is to make a github action that runs periodically with my credentials,
-and makes the data publicly available on the gh-pages branch.
+A github action that runs periodically with my credentials, and makes the data
+publicly available on the [gh-pages
+branch](https://talisein.github.io/aoab-monitor/updates.json).
+
+To be precise, `https://labs.j-novel.club/app/v1/me/library` is queried, and the
+`{book.volume.slug, book.lastUpdated}` pair is collected for Ascendance of a
+Bookworm.
 
 The output is something like
 ```json

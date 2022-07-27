@@ -1,4 +1,6 @@
+#include <experimental/iterator>
 #include <cassert>
+#include <iomanip>
 #include <chrono>
 #include <sstream>
 #include <streambuf>
@@ -34,8 +36,8 @@ namespace {
 }
 
 // Returns Authorization header Bearer {access token}
-curlslistp
-do_login(curl &c)
+static curlslistp
+login(curl &c)
 {
     login_request l;
     std::stringstream ss_out, ss_in;
@@ -43,7 +45,7 @@ do_login(curl &c)
     const char *password = getenv("JNC_PASSWORD");
     if (nullptr == username || nullptr == password || 0 == strlen(username) || 0 == strlen(password)) {
         std::cerr << "Environment variables JNC_USERNAME and JNC_PASSWORD must be set.\n";
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     l.set_username(username);
@@ -52,19 +54,19 @@ do_login(curl &c)
     auto serialized = l.SerializeToOstream(&ss_out);
     assert(serialized);
 
-    c.setopt(CURLOPT_HSTS_CTRL, CURLHSTS_ENABLE);
     c.setopt(CURLOPT_USERAGENT, USERAGENT);
     c.setopt(CURLOPT_POST, 1L);
     c.setopt(CURLOPT_READFUNCTION, m_read);
     c.setopt(CURLOPT_READDATA, &ss_out);
     c.setopt(CURLOPT_WRITEFUNCTION, m_write);
     c.setopt(CURLOPT_WRITEDATA, &ss_in);
+    c.setopt(CURLOPT_FAILONERROR, 1L);
 
     curlslistp protobuf_header { curl_slist_append(nullptr, "Content-Type: application/vnd.google.protobuf") };
     c.setopt(CURLOPT_HTTPHEADER, protobuf_header.get());
     c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/login");
-
-    c.perform();
+    auto code = c.perform();
+    assert(CURLE_OK == code);
 
     login_response r;
     auto parsed = r.ParseFromIstream(&ss_in);
@@ -77,69 +79,83 @@ do_login(curl &c)
     return curlslistp{curl_slist_append(nullptr, header.c_str())};
 }
 
-struct data
+static library_response
+fetch_library(curl& c, curlslistp& auth_header)
 {
-    std::string slug;
-    int64_t updated;
-};
+    std::stringstream ss;
 
-int main(int argc, char *argv[])
-{
-    std::locale::global(std::locale(""));
-    curl_global_init(CURL_GLOBAL_SSL);
-
-    curl c;
-
-    // Login
-    auto auth_header = do_login(c);
-
-    // Fetch Library
     c.reset();
-    c.setopt(CURLOPT_HSTS_CTRL, CURLHSTS_ENABLE);
     c.setopt(CURLOPT_HTTPGET, 1L);
     c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
     c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    std::stringstream ss;
     c.setopt(CURLOPT_WRITEFUNCTION, m_write);
     c.setopt(CURLOPT_WRITEDATA, &ss);
+    c.setopt(CURLOPT_FAILONERROR, 1L);
     c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/me/library");
-    c.perform();
+    auto code = c.perform();
+    assert(CURLE_OK == code);
 
-    library_response r;
-    auto parsed = r.ParseFromIstream(&ss);
+    library_response res;
+    auto parsed = res.ParseFromIstream(&ss);
     assert(parsed);
+    return res;
+}
 
-    // Print AOAB book updated times as JSON
-    std::vector<data> v;
-    for (const auto &book : r.books()) {
-        if (auto& slug = book.volume().slug();
-            slug.starts_with("ascendance") && book.has_lastupdated()) {
-            v.emplace_back(slug, book.lastupdated().epoch_seconds());
-        }
-    }
+static void print_json(library_response &r)
+{
+    // Have to copy books to sort
+    std::vector<book> books(r.books().begin(), r.books().end());
+    // sort by lastUpdated
+    std::ranges::sort(books, std::ranges::greater{},
+                      [](const auto &book) { return book.lastupdated().epoch_seconds(); });
+
+    // Filter out everything except AOAB
+    auto filter = std::ranges::views::filter(
+        [](const auto &book) {
+            return book.volume().slug().starts_with("ascendance")
+                && book.has_lastupdated();
+        });
+    // Format JSON string
+    auto transform = std::ranges::views::transform(
+        [](const auto& book) -> std::string {
+            std::stringstream ss;
+            ss << "  " << std::quoted(book.volume().slug()) << ": "
+               << book.lastupdated().epoch_seconds();
+            return ss.str();
+            });
+
+    // Print
     std::cout << "{\n";
-    std::ranges::sort(v, std::ranges::less{}, &data::updated);
-    auto first = true;
-    for (const auto &d : v) {
-        if (first) {
-            first = false;
-        } else {
-            std::cout << ",\n";
-        }
-        std::cout << "  \"" << d.slug << "\": " << d.updated;
-    }
+    auto view = transform(books | filter);
+    std::copy(view.begin(), view.end(),
+              std::experimental::make_ostream_joiner(std::cout, ",\n"));
     std::cout << "\n}\n";
+}
 
-    // Logout
+static void
+logout(curl &c, curlslistp& auth_header)
+{
     c.reset();
-    c.setopt(CURLOPT_HSTS_CTRL, CURLHSTS_ENABLE);
     c.setopt(CURLOPT_POST, 1L);
     c.setopt(CURLOPT_POSTFIELDSIZE, 0L);
     c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
     c.setopt(CURLOPT_USERAGENT, USERAGENT);
+    c.setopt(CURLOPT_FAILONERROR, 1L);
     c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/logout");
-    c.perform();
+    auto code = c.perform();
+    assert(CURLE_OK == code);
+}
+
+int main(int, char *[])
+{
+    curl_global_init(CURL_GLOBAL_SSL);
+    curl c;
+
+    auto auth_header = login(c);
+    library_response r = fetch_library(c, auth_header);
+    print_json(r);
+    logout(c, auth_header);
 
     curl_global_cleanup();
-    return 0;
+    return EXIT_SUCCESS;
 }

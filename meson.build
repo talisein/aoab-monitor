@@ -7,6 +7,8 @@ project('dregarnuhr', ['c', 'cpp'],
                           ]
        )
 
+meson.get_compiler('cpp').has_header_symbol('experimental/iterator', '__cpp_lib_experimental_ostream_joiner')
+
 curl_dep = dependency('libcurl')
 
 protobuf_dep = dependency('protobuf')
