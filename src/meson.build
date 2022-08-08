@@ -10,7 +10,7 @@ src = [
   'curl.cpp'
 ]
 
-deps = [curl_dep, protobuf_dep]
+deps = [curl_dep, protobuf_dep, date_dep]
 
 exe = executable('aoab-monitor', src, generated,
                  dependencies: deps,

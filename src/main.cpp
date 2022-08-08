@@ -3,9 +3,11 @@
 #include <iomanip>
 #include <chrono>
 #include <sstream>
+#include <fstream>
 #include <streambuf>
 #include <ranges>
 #include <locale>
+#include "date/date.h"
 #include "aoab_curl.h"
 #include "defs.pb.h"
 
@@ -132,6 +134,75 @@ static void print_json(library_response &r)
     std::cout << "\n}\n";
 }
 
+static void ts_to_ostream(std::ostream &os, const timestamp& ts)
+{
+    date::sys_seconds sec(std::chrono::seconds(ts.epoch_seconds()));
+    os << date::format("%c", sec);
+}
+
+static void print_human(const library_response &r)
+{
+    // Have to copy books to sort
+    std::vector<book> books(r.books().begin(), r.books().end());
+    // sort by lastUpdated
+    std::ranges::sort(books, std::ranges::greater{},
+                      [](const auto &book) { return book.volume().publishing().epoch_seconds(); });
+
+    // Filter out everything except AOAB
+    auto filter = std::ranges::views::filter(
+        [](const auto &book) {
+            return book.volume().slug().starts_with("ascendance")
+                && book.volume().has_publishing();
+        });
+    // Format html
+    auto transform = std::ranges::views::transform(
+        [](const auto& book) -> std::string {
+            std::stringstream ss;
+            ss << "\t<tr>\n";
+            ss << "\t\t<td>" << book.volume().title() << "</td>\n";
+            ss << "\t\t<td>";
+            ts_to_ostream(ss, book.volume().publishing());
+            ss << "</td>\n";
+            ss << "\t\t<td>";
+            if (book.has_lastupdated()) {
+                ts_to_ostream(ss, book.lastupdated());
+            }
+            ss << "</td>\n";
+            ss << "\t</tr>\n";
+            return ss.str();
+            });
+
+
+    std::ofstream out("latest.html");
+
+    out << R"html(<!DOCTYPE html>
+<html>
+<style>
+table, th, td {
+  border:1px solid black;
+}
+</style>
+<body>
+
+<h2>Ascendence of a Bookworm Releases</h2>
+
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Published</th>
+    <th>Updated</th>
+  </tr>
+)html";
+    auto view = transform(books | filter);
+    std::copy(view.begin(), view.end(),
+              std::ostream_iterator<std::string>(out));
+    out << R"html(</table>
+</body>
+</html>
+)html";
+}
+
+
 static void
 logout(curl &c, curlslistp& auth_header)
 {
@@ -154,6 +225,7 @@ int main(int, char *[])
     auto auth_header = login(c);
     library_response r = fetch_library(c, auth_header);
     print_json(r);
+    print_human(r);
     logout(c, auth_header);
 
     curl_global_cleanup();

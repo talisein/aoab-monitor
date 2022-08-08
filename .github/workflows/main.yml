@@ -54,7 +54,7 @@ jobs:
         id: auto-commit-action
         with:
           commit_message: Auto-update
-          file_pattern: updates.json
+          file_pattern: updates.json latest.html
           branch: gh-pages
 
       - name: Email
