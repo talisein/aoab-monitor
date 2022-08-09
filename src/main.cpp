@@ -137,7 +137,8 @@ static void print_json(library_response &r)
 static void ts_to_ostream(std::ostream &os, const timestamp& ts)
 {
     date::sys_seconds sec(std::chrono::seconds(ts.epoch_seconds()));
-    os << date::format("%c", sec);
+    //   os << date::format("%e %B %Y-W%V-%u", sec);
+    os << date::format("%e %B %Y", sec);
 }
 
 static void print_human(const library_response &r)
