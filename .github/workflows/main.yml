@@ -70,7 +70,7 @@ jobs:
           # email subject
           subject: 'AOAB-Monitor: epub update'
           # email body as text
-          body: ${{ github.repository }} sees an update to Ascendence of a Bookworm in ${{ github.job }}
+          body: ${{ github.repository }} sees an update. https://aoabmonitor.talinet.net/latest.html
           # comma-separated string, send email to
           to: ${{ secrets.NOTIFY_EMAIL }}
           # from email name
