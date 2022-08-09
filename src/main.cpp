@@ -271,7 +271,7 @@ static void print_human(std::vector<book> &books)
             });
 
 
-    std::ofstream out("latest.html");
+    std::ofstream out("index.html");
 
     out << R"html(<!DOCTYPE html>
 <html>

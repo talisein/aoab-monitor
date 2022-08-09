@@ -54,7 +54,7 @@ jobs:
         id: auto-commit-action
         with:
           commit_message: Auto-update
-          file_pattern: updates.json latest.html
+          file_pattern: updates.json index.html
           branch: gh-pages
 
       - name: Email
@@ -70,7 +70,7 @@ jobs:
           # email subject
           subject: 'AOAB-Monitor: epub update'
           # email body as text
-          body: ${{ github.repository }} sees an update. https://aoabmonitor.talinet.net/latest.html
+          body: ${{ github.repository }} sees an update. https://aoabmonitor.talinet.net/index.html
           # comma-separated string, send email to
           to: ${{ secrets.NOTIFY_EMAIL }}
           # from email name
