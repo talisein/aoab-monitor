@@ -7,12 +7,14 @@ and fetches all the lastUpdated fields for Ascendence of a Bookworm epubs.
 
 A github action that runs periodically with my credentials, and makes the data
 publicly available on the [gh-pages
-branch](https://talisein.github.io/aoab-monitor/updates.json). There's also a
-[human-readable output](https://talisein.github.io/aoab-monitor/latest.html).
+branch](https://aoabmonitor.talinet.net/updates.json). There's also a
+[human-readable output](https://aoabmonitor.talinet.net/).
 
 To be precise, `https://labs.j-novel.club/app/v1/me/library` is queried, and the
 `{book.volume.slug, book.lastUpdated}` pair is collected for Ascendance of a
 Bookworm.
+
+A second github action runs weekly to populate [stats](https://aoabmonitor.talinet.net/stats).
 
 The output is something like
 ```json

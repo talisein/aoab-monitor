@@ -15,3 +15,7 @@ deps = [curl_dep, protobuf_dep, date_dep]
 exe = executable('aoab-monitor', src, generated,
                  dependencies: deps,
                  install: true)
+
+explore_exe = executable('partget', ['parts.cpp', 'curl.cpp'], generated,
+                                     dependencies: [deps, libxmlpp_dep],
+                                     install: true)

@@ -294,6 +294,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 <body>
 
 <h2>Ascendence of a Bookworm Releases</h2>
+<p><a href="stats">Weekly Statistics</a></p>
 
 <table>
   <tr>

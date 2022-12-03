@@ -13,6 +13,17 @@ curl_dep = dependency('libcurl')
 
 protobuf_dep = dependency('protobuf')
 
+zlib_dep = dependency('zlib', fallback: ['zlib'])
+lzma_dep = dependency('liblzma', fallback: ['liblzma'])
+libxml_dep = dependency('libxml-2.0', fallback: ['libxml2'])
+libxmlpp_dep = dependency('libxml++-5.0',
+                          version : '>=5.0.2',
+                          fallback: ['libxmlpp'],
+                          default_options: ['build-deprecated-api=false',
+                                            'build-examples=false',
+                                            'validation=false',
+                                            'maintainer-mode=false'])
+
 date_dep = dependency('date',
                       fallback: ['hinnant-date', 'date_dep'],
                       default_options: ['use_system_tzdb=true'])

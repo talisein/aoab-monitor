@@ -56,6 +56,7 @@ CURLcode curl::perform()
         get_info(CURLINFO_TOTAL_TIME, &total_time);
 
         std::clog << "(" << response_code << "): " << estr << '\n';
+        if (redirect_url) std::clog << "Redirect to: " << redirect_url << std::endl;
     } else {
         char *url {nullptr};
         get_info(CURLINFO_EFFECTIVE_URL, &url);
@@ -80,6 +81,7 @@ CURLcode curl::perform()
         std::clog << "\nCurl success. " << response_code << " " << url << " "
            << downloaded << "B down " << uploaded << "B up in "
            << total_time << "s\n";
+        if (redirect_url) std::clog << "Redirect to: " << redirect_url << std::endl;
     }
 
     return res;

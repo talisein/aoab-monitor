@@ -1,0 +1,76 @@
+# This is a basic workflow to help you get started with Actions
+
+name: CI
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  schedule:
+  - cron: "15 22 * * 1"
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    env:
+      CC: gcc-12
+      CXX: g++-12
+    environment: monitor_env
+
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v3
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install meson g++-12 ninja-build libprotobuf-dev protobuf-compiler libcurl4-openssl-dev libxml2-dev gnuplot-nox
+
+      # Runs a set of commands using the runners shell
+      - name: Configure
+        run: meson setup --warnlevel 3 --buildtype release _build
+
+      - name: Compile
+        run: ninja -C _build
+
+      - name: Run
+        env:
+          JNC_USERNAME: ${{ secrets.JNC_USERNAME }}
+          JNC_PASSWORD: ${{ secrets.JNC_PASSWORD }}
+        run: |
+          mkdir plotdata
+          _build/src/partget data/word_stats.csv data/word_stats.csv plotdata/
+          cp data/word_stats.csv plotdata/
+          cd plotdata
+          gnuplot ../histo.plt > plot.png
+          cd ..
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        id: auto-commit-main-action
+        with:
+          commit_message: Auto-update
+          file_pattern: word_stats.csv
+          branch: main
+
+      - uses: actions/checkout@v3
+        with:
+          ref: gh-pages
+          clean: false
+
+      - name: Make pages
+        run: |
+          cp plotdata/plot.png stats/plot.png
+          cp plotdata/word_stats.csv stats/word_stats.csv
+
+      - uses: stefanzweifel/git-auto-commit-action@v4
+        id: auto-commit-action
+        with:
+          commit_message: Auto-update
+          file_pattern: stats/plot.png stats/word_stats.csv
+          branch: gh-pages
