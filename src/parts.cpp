@@ -245,6 +245,7 @@ write_wordstat_file(std::filesystem::path filename, const wordstat_map_t& stats)
     }
 
     wordstats_os.close();
+    std::cout << "Wrote out " << filename << '\n';
 }
 
 class word_parser : public xmlpp::SaxParser
@@ -275,27 +276,6 @@ count_words(std::stringstream& ss)
     p.parse_stream(ss);
     return p.count();
 }
-
-
-constexpr std::string_view TEST_DATA = R"html(<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xmlns:xml="http://www.w3.org/XML/1998/namespace" lang="en" xml:lang="en">
-<head>
-  <meta content="text/html; charset=UTF-8" http-equiv="content-type"/>
-  <title>Ascendance of a Bookworm: Part 4 Volume 3 Part 8</title>
-  <link href="https://m11.j-novel.club/style/novel-rough.css" rel="stylesheet" type="text/css"/>
-</head>
-<body>
-  <section epub:type="bodymatter chapter">
-    <!--I would not recommend using this content to build EPUBs-->
-    <div class="main">
-      <h1>Epilogue</h1>
-      <p>After her request for praise, Rozemyne gave a half-hearted smile and lowered her gaze. It was the expression she made when giving up on something—such as when she had given up on visiting the library in the Royal Academy, or when she had conceded that her separation from those in the lower city was necessary. But what had she given up on this time?</p>
-    </div>
-  </section>
-</body>
-</html>
-)html";
 
 std::string
 slug_to_short(std::string_view slug)
