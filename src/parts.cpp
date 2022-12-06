@@ -355,29 +355,106 @@ write_gnuplot_part(std::string_view vol, std::filesystem::path filename, std::st
     latest.close();
 }
 
+constexpr int BUCKET_SIZE = 500;
+std::pair<int, int>
+get_limits(const wordstat_map_t &stats)
+{
+    auto [min, max] = std::ranges::minmax(stats | std::views::transform(&wordstat_map_t::value_type::second));
+
+    auto minrem = min % BUCKET_SIZE;
+    auto maxrem = max % BUCKET_SIZE;
+    auto maxadd = maxrem == 0 ? 0 : BUCKET_SIZE;
+
+    // Round min down, round max up
+    // 7301, 19158 -> 7000, 19500
+    return {min - minrem, max + maxadd - maxrem};
+}
+
+bool
+in_bucket(int words, int bucket_start)
+{
+    return words >= (bucket_start - (BUCKET_SIZE/2)) && words < (bucket_start + (BUCKET_SIZE/2));
+}
+
+void
+make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename)
+{
+    std::fstream histo(filename, histo.out);
+    auto limits = get_limits(stats);
+
+    std::set<std::string> parts;
+    std::ranges::copy(stats | std::views::transform([](const auto &stat) { return slug_to_series_part(stat.first.second); }), std::inserter(parts, parts.end()));
+    histo << "Bucket\t";
+    for (const auto &x : parts) {
+        histo << std::quoted(x) << '\t';
+    }
+    histo << '\n';
+    for (int bucket = limits.first; bucket < limits.second; bucket += BUCKET_SIZE)
+    {
+        histo << bucket << '\t';
+        for (const auto &part : parts) {
+            auto cnt = std::ranges::count_if(stats, [&part, bucket](const auto &stat) { auto thispart = slug_to_series_part(stat.first.second); return part == thispart && in_bucket(stat.second, bucket); });
+            histo << cnt << '\t';
+        }
+        histo << '\n';
+    }
+}
+
+int to_bucket(int count)
+{
+    // bucket 5500 has count 5250-5749
+    auto x = count + (BUCKET_SIZE/2);
+    // bucket 5500 has x 5500-5999
+    return x - (x % BUCKET_SIZE);
+}
+
+void
+write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, const wordstat_map_t &stats, std::list<int> &seen_buckets)
+{
+    std::fstream latest(filename, latest.out);
+    latest << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\n";
+    for (const auto &stat : stats) {
+        if (slug_to_short(stat.first.second) != vol) continue;
+        auto bucket = to_bucket(stat.second);
+        auto prev_part_cnt = std::ranges::count_if(stats, [&stat, bucket](const auto &st){ return bucket == to_bucket(st.second) && slug_to_series_part(st.first.second) != slug_to_series_part(stat.first.second);});
+        int y = prev_part_cnt + std::ranges::count(seen_buckets, bucket);
+        seen_buckets.push_back(bucket);
+        latest << bucket + BUCKET_SIZE/4 << '\t'
+               << y << ".5\t"
+               << std::quoted(vol) << '\t'
+               << std::quoted(slug_to_volume_part(stat.first.second)) << '\n';
+    }
+    latest.close();
+}
+
 void
 write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
 {
 
     std::fstream hist(dir / "hist.dat", hist.out);
 
-    std::set<std::string> parts;
+    std::set<std::string> volumes;
     hist << "Words\tPart\n";
     for (const auto &stat : stats) {
         hist << stat.second << '\t' << std::quoted(slug_to_series_part(stat.first.second)) << '\n';
-        parts.insert(slug_to_short(stat.first.second));
+        volumes.insert(slug_to_short(stat.first.second));
     }
     hist.close();
 
-    auto it = parts.crbegin();
-    write_gnuplot_part(*it, dir / "latest.dat", "2.5", stats);
+    auto it = volumes.crbegin();
+    std::list<int> seen_buckets;
     ++it;
-    write_gnuplot_part(*it, dir / "latest-1.dat", "5", stats);
+    write_gnuplot_part2(*it, dir / "latest-1.dat", stats, seen_buckets);
+    --it;
+    write_gnuplot_part2(*it, dir / "latest.dat", stats, seen_buckets);
+
+    /*
     ++it;
     write_gnuplot_part(*it, dir / "latest-2.dat", "7.5", stats);
     ++it;
     write_gnuplot_part(*it, dir / "latest-3.dat", "10", stats);
-
+    */
+    make_histomap(stats, dir / "histo.dat");
 }
 
 int main(int argc, char *argv[])
