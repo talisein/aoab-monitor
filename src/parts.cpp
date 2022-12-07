@@ -376,6 +376,20 @@ in_bucket(int words, int bucket_start)
     return words >= (bucket_start - (BUCKET_SIZE/2)) && words < (bucket_start + (BUCKET_SIZE/2));
 }
 
+constexpr std::array TEN_PART_VOLUMES { std::to_array<std::string_view>({"P2V2", "P2V3", "P3V2", "P3V3", "P3V4"}) };
+
+constexpr auto EIGHT_PART_FILTER = std::views::filter([](const auto &stat) {
+        auto vol = slug_to_short(stat.first.second);
+        auto it = std::ranges::find(TEN_PART_VOLUMES, vol);
+        return it == TEN_PART_VOLUMES.end();
+});
+
+constexpr auto TEN_PART_FILTER = std::views::filter([](const auto &stat) {
+        auto vol = slug_to_short(stat.first.second);
+        auto it = std::ranges::find(TEN_PART_VOLUMES, vol);
+        return it != TEN_PART_VOLUMES.end();
+});
+
 void
 make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename)
 {
@@ -388,13 +402,21 @@ make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename
     for (const auto &x : parts) {
         histo << std::quoted(x) << '\t';
     }
+    histo << std::quoted("10-part Part 2") << '\t' << std::quoted("10-part Part 3");
     histo << '\n';
+
+    auto eight_part_stats = stats | EIGHT_PART_FILTER;
     for (int bucket = limits.first; bucket < limits.second; bucket += BUCKET_SIZE)
     {
         histo << bucket << '\t';
         for (const auto &part : parts) {
-            auto cnt = std::ranges::count_if(stats, [&part, bucket](const auto &stat) { auto thispart = slug_to_series_part(stat.first.second); return part == thispart && in_bucket(stat.second, bucket); });
+            auto cnt = std::ranges::count_if(eight_part_stats, [&part, bucket](const auto &stat) { auto thispart = slug_to_series_part(stat.first.second); return part == thispart && in_bucket(stat.second, bucket); });
             histo << cnt << '\t';
+        }
+        for (const auto &part : {"Part 2", "Part 3"}) {
+            histo <<  std::ranges::count_if(stats | TEN_PART_FILTER, [&part, bucket](const auto &stat) {
+                auto thispart = slug_to_series_part(stat.first.second);
+                return thispart == part && in_bucket(stat.second, bucket); }) << '\t';
         }
         histo << '\n';
     }
@@ -408,8 +430,9 @@ int to_bucket(int count)
     return x - (x % BUCKET_SIZE);
 }
 
+template<typename R>
 void
-write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, const wordstat_map_t &stats, std::list<int> &seen_buckets)
+write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, R &stats, std::list<int> &seen_buckets)
 {
     std::fstream latest(filename, latest.out);
     latest << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\n";
@@ -441,12 +464,13 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
     }
     hist.close();
 
+    auto eight_part_stats = stats | EIGHT_PART_FILTER;
     auto it = volumes.crbegin();
     std::list<int> seen_buckets;
     ++it;
-    write_gnuplot_part2(*it, dir / "latest-1.dat", stats, seen_buckets);
+    write_gnuplot_part2(*it, dir / "latest-1.dat", eight_part_stats, seen_buckets);
     --it;
-    write_gnuplot_part2(*it, dir / "latest.dat", stats, seen_buckets);
+    write_gnuplot_part2(*it, dir / "latest.dat", eight_part_stats, seen_buckets);
 
     /*
     ++it;
