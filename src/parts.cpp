@@ -546,7 +546,7 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
 
         std::fstream fs(dir / "latest-proj.dat", fs.out);
         fs << "Part\tWords\t\"" << *it << " Projection\"\n";
-    if (current_last_part < 8) {
+    if (current_last_part < 8 && current_words < previous_words) {
         fs << current_last_part << '\t' << last_point << '\n';
         for (int i = current_last_part + 1; i <= 8; ++i) {
             fs << i << '\t' << (previous_words - current_words) / (8 - current_last_part) << '\n';
