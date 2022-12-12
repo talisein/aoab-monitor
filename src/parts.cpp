@@ -579,7 +579,7 @@ int main(int argc, char *argv[])
         curl c;
         auto stats = read_wordstat_file(stats_path_in);
         /* Fetch any new data & store to stats_path_out */
-/*
+
         auto cred = login(c);
         auto ids = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
         bool modified = false;
@@ -594,7 +594,7 @@ int main(int argc, char *argv[])
             modified = true;
         }
         if (modified) write_wordstat_file(stats_path_out, stats);
-*/
+
         /* Write gnuplot files */
         write_gnuplot(stats, gnuplot_dir);
     } catch (std::exception &e) {
