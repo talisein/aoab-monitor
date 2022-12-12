@@ -431,9 +431,10 @@ int to_bucket(int count)
 }
 
 template<typename R>
-void
+int
 write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, R &stats, std::list<int> &seen_buckets)
 {
+    int res = 0;
     std::fstream latest(filename, latest.out);
     latest << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\n";
     for (const auto &stat : stats) {
@@ -445,9 +446,73 @@ write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, R &sta
         latest << bucket + BUCKET_SIZE/4 << '\t'
                << y << ".5\t"
                << std::quoted(vol) << '\t'
-               << std::quoted(slug_to_volume_part(stat.first.second)) << '\n';
+               << slug_to_volume_part(stat.first.second) << '\n';
+        res = stat.second;
     }
     latest.close();
+    return res;
+}
+
+auto get_part_filter(std::string_view vol)
+{
+    return std::views::filter([vol](const auto& stat) { return slug_to_short(stat.first.second) == vol; });
+}
+
+template<typename R>
+int
+write_gnuplot_accum(std::string_view vol, std::filesystem::path filename, R &stats)
+{
+    std::fstream fs(filename, fs.out);
+
+    fs << "Part\tWords\t" << std::quoted(vol) << "\n0\t0\n";
+    int sum = 0;
+    for (const auto &stat : stats | get_part_filter(vol)) {
+        sum += stat.second;
+        fs << slug_to_volume_part(stat.first.second) << '\t';
+        fs << sum << '\n';
+    }
+    fs.close();
+    return sum;
+}
+
+template<typename R>
+int
+write_gnuplot_accum_summary(std::string_view vol, std::filesystem::path filename, R &stats)
+{
+    std::fstream fs(filename, fs.out);
+
+    fs << "Part\tWords\t" << std::quoted(vol) << "\n0\t0\n";
+    int sum = 0;
+    std::string last_part;
+    for (const auto &stat : stats | get_part_filter(vol)) {
+        sum += stat.second;
+        last_part = std::string(slug_to_volume_part(stat.first.second));
+    }
+    fs << last_part << '\t' << sum << '\n';
+    fs.close();
+
+    return sum;
+}
+
+template<typename R>
+int
+write_gnuplot_avg_summary(std::string_view vol, std::filesystem::path filename, R &stats)
+{
+    std::fstream fs(filename, fs.out);
+
+    fs << "Part\tWords\t\"" << vol << " Average\"\n";
+    int sum = 0;
+    std::string last_part;
+    int parts = 0;
+    for (const auto &stat : stats | get_part_filter(vol)) {
+        sum += stat.second;
+        last_part = std::string(slug_to_volume_part(stat.first.second));
+        ++parts;
+    }
+    fs << 1 << '\t' << sum / parts << '\n';
+    fs << 8 << '\t' << sum / parts << '\n';
+    fs.close();
+    return std::stoi(last_part);
 }
 
 void
@@ -469,8 +534,25 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
     std::list<int> seen_buckets;
     ++it;
     write_gnuplot_part2(*it, dir / "latest-1.dat", eight_part_stats, seen_buckets);
+    write_gnuplot_accum(*it, dir / "latest-1-accum-1.dat", eight_part_stats);
+    int previous_words = write_gnuplot_accum_summary(*it, dir / "latest-1-accum-2.dat", eight_part_stats);
+    write_gnuplot_avg_summary(*it, dir / "latest-1-avg-1.dat", eight_part_stats);
+
     --it;
-    write_gnuplot_part2(*it, dir / "latest.dat", eight_part_stats, seen_buckets);
+    write_gnuplot_accum(*it, dir / "latest-accum-1.dat", eight_part_stats);
+    int current_words = write_gnuplot_accum(*it, dir / "latest-accum-2.dat", eight_part_stats);
+    int last_point = write_gnuplot_part2(*it, dir / "latest.dat", eight_part_stats, seen_buckets);
+    int current_last_part = write_gnuplot_avg_summary(*it, dir / "latest-avg-1.dat", eight_part_stats);
+
+        std::fstream fs(dir / "latest-proj.dat", fs.out);
+        fs << "Part\tWords\t\"" << *it << " Projection\"\n";
+    if (current_last_part < 8) {
+        fs << current_last_part << '\t' << last_point << '\n';
+        for (int i = current_last_part + 1; i <= 8; ++i) {
+            fs << i << '\t' << (previous_words - current_words) / (8 - current_last_part) << '\n';
+        }
+        fs.close();
+    }
 
     /*
     ++it;
@@ -497,7 +579,7 @@ int main(int argc, char *argv[])
         curl c;
         auto stats = read_wordstat_file(stats_path_in);
         /* Fetch any new data & store to stats_path_out */
-
+/*
         auto cred = login(c);
         auto ids = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
         bool modified = false;
@@ -512,7 +594,7 @@ int main(int argc, char *argv[])
             modified = true;
         }
         if (modified) write_wordstat_file(stats_path_out, stats);
-
+*/
         /* Write gnuplot files */
         write_gnuplot(stats, gnuplot_dir);
     } catch (std::exception &e) {

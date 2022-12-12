@@ -45,6 +45,7 @@ jobs:
           cp data/word_stats.csv plotdata/
           cd plotdata
           gnuplot ../histo.plt > plot.png
+          gnuplot ../projection.plt > projection.png
           cd ..
 
       - uses: stefanzweifel/git-auto-commit-action@v4
