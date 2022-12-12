@@ -63,11 +63,12 @@ jobs:
       - name: Make pages
         run: |
           cp plotdata/plot.png stats/plot.png
+          cp plotdata/projection.png stats/projection.png
           cp plotdata/word_stats.csv stats/word_stats.csv
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         id: auto-commit-action
         with:
           commit_message: Auto-update
-          file_pattern: stats/plot.png stats/word_stats.csv
+          file_pattern: stats/plot.png stats/projection.png stats/word_stats.csv
           branch: gh-pages
