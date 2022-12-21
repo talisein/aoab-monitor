@@ -560,11 +560,11 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
         std::fstream fs(dir / "latest-proj.dat", fs.out);
         fs << "Part\tWords\t\"" << *it << " Projection\"\n";
     if (current_last_part < 8 && current_words < previous_words) {
-        const auto last_volume = *volumes.crbegin();
-        const auto second_to_last_volume = *std::next(volumes.crbegin());
-        const auto ratio = jp_page_lengths.at(last_volume) / jp_page_lengths.at(second_to_last_volume);
+        const auto current_jp_pages = *volumes.crbegin();
+        const auto previous_jp_pages = *std::next(volumes.crbegin());
+        const auto ratio = jp_page_lengths.at(current_jp_pages) / jp_page_lengths.at(previous_jp_pages);
         fs << current_last_part << '\t' << last_point << '\n';
-        const int word_deficit = static_cast<int>((previous_words - current_words) * ratio);
+        const int word_deficit = static_cast<int>(previous_words*ratio) - current_words;
         for (int i = current_last_part + 1; i <= 8; ++i) {
             fs << i << '\t' << word_deficit / (8 - current_last_part) << '\n';
         }
