@@ -41,6 +41,19 @@ namespace {
 
     }
 
+    using page_length_t = double;
+    const std::map<std::string_view, page_length_t> jp_page_lengths {
+        {"P5V1", 446},
+        {"P5V2", 427},
+        {"P5V3", 420},
+        {"P5V4", 431},
+        {"P5V5", 431},
+        {"P5V6", 443},
+        {"P5V7", 412},
+        {"P5V8", 432},
+        {"P5V9", 440},
+        {"P5V10", 421},
+    };
 }
 
 struct credentials
@@ -547,9 +560,13 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
         std::fstream fs(dir / "latest-proj.dat", fs.out);
         fs << "Part\tWords\t\"" << *it << " Projection\"\n";
     if (current_last_part < 8 && current_words < previous_words) {
+        const auto last_volume = *volumes.crbegin();
+        const auto second_to_last_volume = *std::next(volumes.crbegin());
+        const auto ratio = jp_page_lengths.at(last_volume) / jp_page_lengths.at(second_to_last_volume);
         fs << current_last_part << '\t' << last_point << '\n';
+        const int word_deficit = static_cast<int>((previous_words - current_words) * ratio);
         for (int i = current_last_part + 1; i <= 8; ++i) {
-            fs << i << '\t' << (previous_words - current_words) / (8 - current_last_part) << '\n';
+            fs << i << '\t' << word_deficit / (8 - current_last_part) << '\n';
         }
         fs.close();
     }
