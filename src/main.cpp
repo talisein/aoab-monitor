@@ -17,6 +17,16 @@ namespace {
     static constexpr auto USERAGENT {"aoab-monitor/1.0 (github/talisein/aoab-monitor)"};
 
     extern "C" {
+        size_t header_callback(char *buffer,
+                       size_t size,
+                       size_t nitems,
+                       void *)
+        {
+            std::string_view view { buffer, nitems };
+            std::cerr << view << std::endl;
+            return nitems * size;
+        }
+
         static size_t
         m_write(void *data, size_t size, size_t nmemb, void *userp)
         {
@@ -148,6 +158,15 @@ fetch_library(curl& c, curlslistp& auth_header)
         std::cerr << "Fetched library, but this isn't the last page! Need to implement multiple calls.\n";
     }
 
+    // tmp
+    auto link = res.books().begin()->downloads().begin()->link();
+    c.setopt(CURLOPT_NOBODY, 1L);
+    c.setopt(CURLOPT_URL, link.c_str());
+    c.setopt(CURLOPT_HEADERFUNCTION, &header_callback);
+    std::cerr << "Fetching " << link << '\n';
+    c.perform();
+    // tmp
+
     return {std::ranges::begin(res.books()), std::ranges::end(res.books())};
 }
 
@@ -186,6 +205,61 @@ static void ts_to_ostream(std::ostream &os, const timestamp& ts)
     date::sys_seconds sec(std::chrono::seconds(ts.epoch_seconds()));
     //   os << date::format("%e %B %Y-W%V-%u", sec);
     os << date::format("%e %B %Y", sec);
+}
+
+void write_next(auto ts) {
+    std::ofstream out("next.html");
+    out << R"html(<!DOCTYPE html>
+<html>
+<style>
+
+td, th {
+  padding: 8px;
+}
+
+.centered {
+   text-align: center;
+}
+
+.righted {
+   text-align: right;
+}
+
+tr:nth-child(even) {background-color: #f2f2f2;}
+</style>
+<body>
+
+<h2>Ascendence of a Bookworm Predicted Release Dates</h2>
+
+<table>
+  <tr>
+    <th>Title</th>
+    <th>Stream Start Prediction</th>
+    <th>Publish Prediction</th>
+  </tr>
+)html";
+
+    for ( int i = 1; i < 9; ++i) {
+        auto nextts = std::chrono::seconds(ts.epoch_seconds()) + std::chrono::weeks(i*8);
+        std::stringstream ss;
+        ss << "\t<tr>\n";
+        ss << "\t\t<td>" << "Part 5 Volume " << (2 + i) << "</td>\n";
+        ss << "\t\t<td class=\"righted\">";
+        ss << date::format("%e %B %Y", date::sys_seconds(nextts - std::chrono::weeks(13)));
+        ss << "</td>\n";
+        ss << "\t\t<td class=\"righted\">";
+        ss << date::format("%e %B %Y", date::sys_seconds(nextts));
+        ss << "</td>\n";
+
+        ss << "\t</tr>\n";
+        out << ss.str();
+    }
+
+    out << R"html(</table>
+</body>
+</html>
+)html";
+
 }
 
 static void print_human(std::vector<book> &books)
@@ -294,7 +368,6 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 <body>
 
 <h2>Ascendence of a Bookworm Releases</h2>
-<p><a href="stats">Weekly Statistics</a></p>
 
 <table>
   <tr>
@@ -331,6 +404,8 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 </body>
 </html>
 )html";
+
+    write_next(books.begin()->volume().publishing());
 }
 
 
