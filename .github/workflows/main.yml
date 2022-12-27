@@ -49,7 +49,7 @@ jobs:
         id: auto-commit-action
         with:
           commit_message: Auto-update
-          file_pattern: updates.json index.html
+          file_pattern: updates.json index.html next.html
           branch: gh-pages
 
       - name: Email
