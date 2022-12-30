@@ -389,7 +389,7 @@ in_bucket(int words, int bucket_start)
     return words >= (bucket_start - (BUCKET_SIZE/2)) && words < (bucket_start + (BUCKET_SIZE/2));
 }
 
-constexpr std::array TEN_PART_VOLUMES { std::to_array<std::string_view>({"P2V2", "P2V3", "P3V2", "P3V3", "P3V4"}) };
+constexpr std::array TEN_PART_VOLUMES { std::to_array<std::string_view>({"P2V2", "P2V3", "P3V2", "P3V3", "P3V4", "P5V3"}) };
 
 constexpr auto EIGHT_PART_FILTER = std::views::filter([](const auto &stat) {
         auto vol = slug_to_short(stat.first.second);
