@@ -413,9 +413,11 @@ make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename
     std::ranges::copy(stats | std::views::transform([](const auto &stat) { return slug_to_series_part(stat.first.second); }), std::inserter(parts, parts.end()));
     histo << "Bucket\t";
     for (const auto &x : parts) {
-        histo << std::quoted(x) << '\t';
+        histo << std::quoted(x);
     }
-    histo << std::quoted("10-part Part 2") << '\t' << std::quoted("10-part Part 3");
+    histo << '\t' << std::quoted("10-part Part 2");
+    histo << '\t' << std::quoted("10-part Part 3");
+    histo << '\t' << std::quoted("10-part Part 5");
     histo << '\n';
 
     auto eight_part_stats = stats | EIGHT_PART_FILTER;
@@ -426,7 +428,7 @@ make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename
             auto cnt = std::ranges::count_if(eight_part_stats, [&part, bucket](const auto &stat) { auto thispart = slug_to_series_part(stat.first.second); return part == thispart && in_bucket(stat.second, bucket); });
             histo << cnt << '\t';
         }
-        for (const auto &part : {"Part 2", "Part 3"}) {
+        for (const auto &part : {"Part 2", "Part 3", "Part 5"}) {
             histo <<  std::ranges::count_if(stats | TEN_PART_FILTER, [&part, bucket](const auto &stat) {
                 auto thispart = slug_to_series_part(stat.first.second);
                 return thispart == part && in_bucket(stat.second, bucket); }) << '\t';

@@ -17,15 +17,6 @@ namespace {
     static constexpr auto USERAGENT {"aoab-monitor/1.0 (github/talisein/aoab-monitor)"};
 
     extern "C" {
-        size_t header_callback(char *buffer,
-                       size_t size,
-                       size_t nitems,
-                       void *)
-        {
-            std::string_view view { buffer, nitems };
-            std::cerr << view << std::endl;
-            return nitems * size;
-        }
 
         static size_t
         m_write(void *data, size_t size, size_t nmemb, void *userp)
@@ -157,15 +148,6 @@ fetch_library(curl& c, curlslistp& auth_header)
     if (!res.pagination().lastpage()) {
         std::cerr << "Fetched library, but this isn't the last page! Need to implement multiple calls.\n";
     }
-
-    // tmp
-    auto link = res.books().begin()->downloads().begin()->link();
-    c.setopt(CURLOPT_NOBODY, 1L);
-    c.setopt(CURLOPT_URL, link.c_str());
-    c.setopt(CURLOPT_HEADERFUNCTION, &header_callback);
-    std::cerr << "Fetching " << link << '\n';
-    c.perform();
-    // tmp
 
     return {std::ranges::begin(res.books()), std::ranges::end(res.books())};
 }
