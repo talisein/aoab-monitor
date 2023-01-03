@@ -2,12 +2,26 @@ project('dregarnuhr', ['c', 'cpp'],
         license : 'GPLv3+',
         version : '0.9.0',
         default_options : ['c_std=gnu17',
-                           'cpp_std=gnu++20',
                            'buildtype=release'
                           ]
        )
+cpp_compiler = meson.get_compiler('cpp')
+if cpp_compiler.get_argument_syntax() == 'msvc'
+  if cpp_compiler.has_argument('/std:c++23')
+    cpp23_args = ['/std:c++23']
+  else
+    cpp23_args = ['/std:c++latest']
+  endif
+else
+  if cpp_compiler.has_argument('-std=c++23')
+    cpp23_args = ['-std=c++23']
+  else
+    cpp23_args = ['-std=c++2b']
+  endif
+endif
+add_global_arguments(cpp23_args, language: 'cpp')
 
-meson.get_compiler('cpp').has_header_symbol('experimental/iterator', '__cpp_lib_experimental_ostream_joiner')
+meson.get_compiler('cpp').has_header_symbol('experimental/iterator', '__cpp_lib_experimental_ostream_joiner', args: cpp23_args)
 
 curl_dep = dependency('libcurl')
 
