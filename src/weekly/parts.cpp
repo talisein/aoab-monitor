@@ -157,29 +157,6 @@ int to_bucket(int count)
     return x - (x % BUCKET_SIZE);
 }
 
-template<typename R>
-int
-write_gnuplot_part2(std::string_view vol, std::filesystem::path filename, R &stats, std::list<int> &seen_buckets)
-{
-    int res = 0;
-    std::fstream latest(filename, latest.out);
-    latest << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\n";
-    for (const auto &stat : stats) {
-        if (slug_to_short(stat.first.second) != vol) continue;
-        auto bucket = to_bucket(stat.second);
-        auto prev_part_cnt = std::ranges::count_if(stats, [&stat, bucket](const auto &st){ return bucket == to_bucket(st.second) && slug_to_series_part(st.first.second) != slug_to_series_part(stat.first.second);});
-        int y = prev_part_cnt + std::ranges::count(seen_buckets, bucket);
-        seen_buckets.push_back(bucket);
-        latest << bucket + BUCKET_SIZE/4 << '\t'
-               << y << ".5\t"
-               << std::quoted(vol) << '\t'
-               << slug_to_volume_part(stat.first.second) << '\n';
-        res = stat.second;
-    }
-    latest.close();
-    return res;
-}
-
 auto get_part_filter(std::string_view vol)
 {
     return std::views::filter([vol](const auto& stat) { return slug_to_short(stat.first.second) == vol; });
@@ -246,8 +223,9 @@ write_gnuplot_avg_summary(std::string_view vol, std::filesystem::path filename, 
 }
 
 void
-write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
+write_gnuplot(historic_word_stats &wordstats, const std::filesystem::path& dir)
 {
+    auto &stats = wordstats.wordstats;
 
     std::fstream hist(dir / "hist.dat", hist.out);
 
@@ -271,14 +249,14 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
     const int max_total_parts = std::max(current_total_parts, prev_total_parts);
 
     std::list<int> seen_buckets;
-    write_gnuplot_part2(prev_volume, dir / "latest-1.dat", prev_stats, seen_buckets);
+    wordstats.write_volume_points(prev_volume, dir / "latest-1.dat");
     write_gnuplot_accum(prev_volume, dir / "latest-1-accum-1.dat", prev_stats);
     int previous_words = write_gnuplot_accum_summary(prev_volume, dir / "latest-1-accum-2.dat", prev_stats);
     write_gnuplot_avg_summary(prev_volume, dir / "latest-1-avg-1.dat", prev_stats, max_total_parts);
 
     write_gnuplot_accum(cur_volume, dir / "latest-accum-1.dat", cur_stats);
     int current_words = write_gnuplot_accum(cur_volume, dir / "latest-accum-2.dat", cur_stats);
-    int last_point = write_gnuplot_part2(cur_volume, dir / "latest.dat", cur_stats, seen_buckets);
+    int last_point = wordstats.write_volume_points(cur_volume, dir / "latest.dat");
     int current_last_part = write_gnuplot_avg_summary(cur_volume, dir / "latest-avg-1.dat", cur_stats, max_total_parts);
 
     std::fstream fs(dir / "latest-proj.dat", fs.out);
@@ -335,7 +313,7 @@ int main(int argc, char *argv[])
         if (stats.modified) stats.write(stats_path_out);
 
         /* Write gnuplot files */
-        write_gnuplot(stats.wordstats, gnuplot_dir);
+        write_gnuplot(stats, gnuplot_dir);
     } catch (std::exception &e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return EXIT_FAILURE;

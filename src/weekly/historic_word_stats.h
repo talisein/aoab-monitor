@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <map>
 #include <set>
+#include <list>
 #include <ranges>
 #include <string_view>
 #include <system_error>
@@ -19,6 +20,8 @@ struct historic_word_stats
     std::map<legacy_slug_t, word_count_t> wordstats;
     bool modified;
     std::set<std::string> volumes; // P1V1, P1V2, etc
+    std::list<word_count_t> seen_buckets_8;
+    std::list<word_count_t> seen_buckets_10;
 
 private:
     void read(std::istream &is);
@@ -37,4 +40,7 @@ public:
     void write(std::filesystem::path filename);
     void write(std::ostream &os);
 
+
+    word_count_t write_volume_points(std::string_view vol, std::ostream &ofs);
+    word_count_t write_volume_points(std::string_view vol, std::filesystem::path filename);
 };

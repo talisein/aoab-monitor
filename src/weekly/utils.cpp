@@ -34,6 +34,7 @@ count_words(std::istream& ss)
     return {p.count()};
 }
 
+/* slug to P1V1 */
 std::string
 slug_to_short(std::string_view slug)
 {
@@ -57,6 +58,7 @@ slug_to_short(std::string_view slug)
     return res;
 }
 
+/* slug to Part 1 */
 std::string
 slug_to_series_part(std::string_view slug)
 {
