@@ -41,7 +41,7 @@ jobs:
           JNC_PASSWORD: ${{ secrets.JNC_PASSWORD }}
         run: |
           mkdir plotdata
-          _build/src/partget data/word_stats.csv data/word_stats.csv plotdata/
+          _build/src/weekly/partget data/word_stats.csv data/word_stats.csv plotdata/
           cp data/word_stats.csv plotdata/
           cd plotdata
           gnuplot ../histo.plt > plot.png

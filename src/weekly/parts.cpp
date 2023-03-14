@@ -15,129 +15,11 @@
 #include "date/date.h"
 #include "aoab_curl.h"
 #include "defs.pb.h"
+#include "facts.h"
 
 using namespace google::protobuf;
 
-namespace {
-    static constexpr auto USERAGENT {"aoab-stats/1.0 (github/talisein/aoab-monitor)"};
-
-    extern "C" {
-        static size_t
-        m_write(void *data, size_t size, size_t nmemb, void *userp)
-        {
-            auto s = static_cast<std::basic_ostream<char>*>(userp);
-            std::streamsize count = size * nmemb;
-            s->write(static_cast<char*>(data), count);
-            return count;
-        }
-
-        static size_t
-        m_read(char *ptr, size_t size, size_t nmemb, void *userdata)
-        {
-            auto ss = static_cast<std::basic_istream<char>*>(userdata);
-            ss->read(ptr, size*nmemb);
-            return ss->gcount();
-        }
-
-    }
-
-    using page_length_t = double;
-    const std::map<std::string_view, page_length_t> jp_page_lengths {
-        {"P5V1", 446},
-        {"P5V2", 427},
-        {"P5V3", 420},
-        {"P5V4", 431},
-        {"P5V5", 431},
-        {"P5V6", 443},
-        {"P5V7", 412},
-        {"P5V8", 432},
-        {"P5V9", 440},
-        {"P5V10", 421},
-    };
-}
-
-struct credentials
-{
-    ~credentials()
-    {
-        if (auth_header) {
-            logout();
-        }
-    }
-
-    void logout()
-    {
-        c.reset();
-        c.setopt(CURLOPT_POST, 1L);
-        c.setopt(CURLOPT_POSTFIELDSIZE, 0L);
-        c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
-        c.setopt(CURLOPT_USERAGENT, USERAGENT);
-        c.setopt(CURLOPT_FAILONERROR, 1L);
-        c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/logout");
-        auto code = c.perform();
-        if (CURLE_OK != code ) {
-            throw std::runtime_error("Failed to logout");
-        }
-    }
-
-    curl &c;
-    curlslistp auth_header;
-};
-
 // Returns Authorization header Bearer {access token}
-static credentials
-login(curl &c)
-{
-    login_request l;
-    std::stringstream ss_out, ss_in;
-    const char *username = getenv("JNC_USERNAME");
-    const char *password = getenv("JNC_PASSWORD");
-    if (nullptr == username || nullptr == password || 0 == strlen(username) || 0 == strlen(password)) {
-        std::cerr << "Environment variables JNC_USERNAME and JNC_PASSWORD must be set.\n";
-        exit(EXIT_FAILURE);
-    }
-
-    l.set_username(username);
-    l.set_password(password);
-    l.set_slim(true);
-    auto serialized = l.SerializeToOstream(&ss_out);
-    if (!serialized) {
-        throw std::runtime_error("Failed to serialize login_request");
-    }
-
-    c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    c.setopt(CURLOPT_POST, 1L);
-    c.setopt(CURLOPT_READFUNCTION, m_read);
-    c.setopt(CURLOPT_READDATA, &ss_out);
-    c.setopt(CURLOPT_WRITEFUNCTION, m_write);
-    c.setopt(CURLOPT_WRITEDATA, &ss_in);
-    c.setopt(CURLOPT_FAILONERROR, 1L);
-
-    curlslistp protobuf_header { curl_slist_append(nullptr, "Content-Type: application/vnd.google.protobuf") };
-    c.setopt(CURLOPT_HTTPHEADER, protobuf_header.get());
-    c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/login");
-    auto code = c.perform();
-    if (CURLE_OK != code) {
-        throw std::runtime_error("Failed to login");
-    }
-
-    login_response r;
-    auto parsed = r.ParseFromIstream(&ss_in);
-    if (!parsed) {
-        throw std::runtime_error("failed to parse login_response");
-    }
-    if (r.token().size() == 0) {
-        throw std::runtime_error("login_response.token has size 0");
-    }
-
-    std::stringstream ss;
-    ss << "Authorization: Bearer " << r.token();
-    auto header = ss.str();
-    return {
-        .c = c,
-        .auth_header = curlslistp{curl_slist_append(nullptr, header.c_str())}
-    };
-}
 
 using  id_map_t = std::map<std::string, std::string>;
 id_map_t
@@ -149,17 +31,7 @@ fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
 
     std::stringstream ss;
 
-    c.reset();
-    c.setopt(CURLOPT_HTTPGET, 1L);
-    c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
-    c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    c.setopt(CURLOPT_WRITEFUNCTION, m_write);
-    c.setopt(CURLOPT_WRITEDATA, &ss);
-    c.setopt(CURLOPT_FAILONERROR, 1L);
-    c.setopt(CURLOPT_URL, url.c_str());
-
-//    curlslistp json_header { curl_slist_append(nullptr, "Content-Type: application/json") };
-//    c.setopt(CURLOPT_HTTPHEADER, json_header.get());
+    c.set_get_opts(ss, auth_header, url);
 
     auto code = c.perform();
     if (CURLE_OK != code) {
@@ -187,14 +59,7 @@ fetch_part(curl& c, curlslistp& auth_header, const id_map_t::value_type& id, std
     url_ss << "https://labs.j-novel.club/embed/" << id.first << "/data.xhtml";
     auto url = url_ss.str();
 
-    c.reset();
-    c.setopt(CURLOPT_HTTPGET, 1L);
-    c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
-    c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    c.setopt(CURLOPT_WRITEFUNCTION, m_write);
-    c.setopt(CURLOPT_WRITEDATA, &ofs);
-    c.setopt(CURLOPT_FAILONERROR, 1L);
-    c.setopt(CURLOPT_URL, url.c_str());
+    c.set_get_opts(ofs, auth_header, url);
 
     auto code = c.perform();
     if (CURLE_OK != code) {
@@ -574,7 +439,7 @@ write_gnuplot(const wordstat_map_t &stats, const std::filesystem::path& dir)
     if (current_last_part < current_total_parts && current_words < previous_words) {
         const auto current_jp_pages = *volumes.crbegin();
         const auto previous_jp_pages = *std::next(volumes.crbegin());
-        const auto ratio = jp_page_lengths.at(current_jp_pages) / jp_page_lengths.at(previous_jp_pages);
+        const auto ratio = aoab_facts::jp_page_lengths.at(current_jp_pages) / aoab_facts::jp_page_lengths.at(previous_jp_pages);
         fs << current_last_part << '\t' << last_point << '\n';
         const int word_deficit = static_cast<int>(previous_words*ratio) - current_words;
         for (int i = current_last_part + 1; i <= current_total_parts; ++i) {
@@ -609,7 +474,7 @@ int main(int argc, char *argv[])
         auto stats = read_wordstat_file(stats_path_in);
         /* Fetch any new data & store to stats_path_out */
 
-        auto cred = login(c);
+        auto cred = c.login();
         auto ids = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
         bool modified = false;
         for (const auto& id : ids) {

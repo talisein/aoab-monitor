@@ -43,7 +43,7 @@ jobs:
         env:
           JNC_USERNAME: ${{ secrets.JNC_USERNAME }}
           JNC_PASSWORD: ${{ secrets.JNC_PASSWORD }}
-        run: _build/src/aoab-monitor > updates.json
+        run: _build/src/daily/aoab-monitor > updates.json
 
       - uses: stefanzweifel/git-auto-commit-action@v4
         id: auto-commit-action

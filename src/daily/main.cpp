@@ -13,128 +13,12 @@
 
 using namespace google::protobuf;
 
-namespace {
-    static constexpr auto USERAGENT {"aoab-monitor/1.0 (github/talisein/aoab-monitor)"};
-
-    extern "C" {
-
-        static size_t
-        m_write(void *data, size_t size, size_t nmemb, void *userp)
-        {
-            auto s = static_cast<std::basic_ostream<char>*>(userp);
-            std::streamsize count = size * nmemb;
-            s->write(static_cast<char*>(data), count);
-            return count;
-        }
-
-        static size_t
-        m_read(char *ptr, size_t size, size_t nmemb, void *userdata)
-        {
-            auto ss = static_cast<std::basic_istream<char>*>(userdata);
-            ss->read(ptr, size*nmemb);
-            return ss->gcount();
-        }
-
-    }
-
-}
-
-struct credentials
-{
-    ~credentials()
-    {
-        if (auth_header) {
-            logout();
-        }
-    }
-
-    void logout()
-    {
-        c.reset();
-        c.setopt(CURLOPT_POST, 1L);
-        c.setopt(CURLOPT_POSTFIELDSIZE, 0L);
-        c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
-        c.setopt(CURLOPT_USERAGENT, USERAGENT);
-        c.setopt(CURLOPT_FAILONERROR, 1L);
-        c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/logout");
-        auto code = c.perform();
-        if (CURLE_OK != code ) {
-            throw std::runtime_error("Failed to logout");
-        }
-    }
-
-    curl &c;
-    curlslistp auth_header;
-};
-
-// Returns Authorization header Bearer {access token}
-static credentials
-login(curl &c)
-{
-    login_request l;
-    std::stringstream ss_out, ss_in;
-    const char *username = getenv("JNC_USERNAME");
-    const char *password = getenv("JNC_PASSWORD");
-    if (nullptr == username || nullptr == password || 0 == strlen(username) || 0 == strlen(password)) {
-        std::cerr << "Environment variables JNC_USERNAME and JNC_PASSWORD must be set.\n";
-        exit(EXIT_FAILURE);
-    }
-
-    l.set_username(username);
-    l.set_password(password);
-    l.set_slim(true);
-    auto serialized = l.SerializeToOstream(&ss_out);
-    if (!serialized) {
-        throw std::runtime_error("Failed to serialize login_request");
-    }
-
-    c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    c.setopt(CURLOPT_POST, 1L);
-    c.setopt(CURLOPT_READFUNCTION, m_read);
-    c.setopt(CURLOPT_READDATA, &ss_out);
-    c.setopt(CURLOPT_WRITEFUNCTION, m_write);
-    c.setopt(CURLOPT_WRITEDATA, &ss_in);
-    c.setopt(CURLOPT_FAILONERROR, 1L);
-
-    curlslistp protobuf_header { curl_slist_append(nullptr, "Content-Type: application/vnd.google.protobuf") };
-    c.setopt(CURLOPT_HTTPHEADER, protobuf_header.get());
-    c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/login");
-    auto code = c.perform();
-    if (CURLE_OK != code) {
-        throw std::runtime_error("Failed to login");
-    }
-
-    login_response r;
-    auto parsed = r.ParseFromIstream(&ss_in);
-    if (!parsed) {
-        throw std::runtime_error("failed to parse login_response");
-    }
-    if (r.token().size() == 0) {
-        throw std::runtime_error("login_response.token has size 0");
-    }
-
-    std::stringstream ss;
-    ss << "Authorization: Bearer " << r.token();
-    auto header = ss.str();
-    return {
-        .c = c,
-        .auth_header = curlslistp{curl_slist_append(nullptr, header.c_str())}
-    };
-}
-
 static std::vector<book>
 fetch_library(curl& c, curlslistp& auth_header)
 {
     std::stringstream ss;
 
-    c.reset();
-    c.setopt(CURLOPT_HTTPGET, 1L);
-    c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
-    c.setopt(CURLOPT_USERAGENT, USERAGENT);
-    c.setopt(CURLOPT_WRITEFUNCTION, m_write);
-    c.setopt(CURLOPT_WRITEDATA, &ss);
-    c.setopt(CURLOPT_FAILONERROR, 1L);
-    c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/me/library");
+    c.set_get_opts(ss, auth_header, "https://labs.j-novel.club/app/v1/me/library");
     auto code = c.perform();
     if (CURLE_OK != code) {
         throw std::runtime_error("Failed to fetch library_response");
@@ -399,7 +283,7 @@ int main(int, char *[])
 
     try {
         curl c;
-        auto cred = login(c);
+        auto cred = c.login();
         auto books = fetch_library(c, cred.auth_header);
         print_json(books);
         print_human(books);

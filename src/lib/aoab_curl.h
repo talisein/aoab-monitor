@@ -1,6 +1,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <string_view>
 #include <curl/curl.h>
 
 struct CURLEscapeDeleter {
@@ -23,6 +24,10 @@ using curlp = std::unique_ptr<CURL, CURLEasyDeleter>;
 using curlshp = std::unique_ptr<CURLSH, CURLShareDeleter>;
 using curlstr = std::unique_ptr<char, CURLEscapeDeleter>;
 using curlslistp = std::unique_ptr<struct curl_slist, CURLSListDeleter>;
+
+extern const std::string_view USERAGENT;
+
+struct credentials;
 
 class curl
 {
@@ -60,6 +65,38 @@ public:
 
     CURLcode perform();
 
+    void set_get_opts(std::stringstream& write_stream, curlslistp& auth_header, std::string_view url);
+    void set_post_opts(std::stringstream& write_stream, std::stringstream &read_stream, curlslistp& auth_header, std::string_view url);
+    struct credentials login();
+
 private:
     curlp _p;
+};
+
+struct credentials
+{
+    ~credentials()
+    {
+        if (auth_header) {
+            logout();
+        }
+    }
+
+    void logout()
+    {
+        c.reset();
+        c.setopt(CURLOPT_POST, 1L);
+        c.setopt(CURLOPT_POSTFIELDSIZE, 0L);
+        c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
+        c.setopt(CURLOPT_USERAGENT, USERAGENT.begin());
+        c.setopt(CURLOPT_FAILONERROR, 1L);
+        c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/logout");
+        auto code = c.perform();
+        if (CURLE_OK != code ) {
+            throw std::runtime_error("Failed to logout");
+        }
+    }
+
+    curl &c;
+    curlslistp auth_header;
 };
