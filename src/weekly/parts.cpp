@@ -10,18 +10,17 @@
 #include <streambuf>
 #include <ranges>
 #include <locale>
+#include <list>
 #include <system_error>
-#include <libxml++/libxml++.h>
 #include "date/date.h"
 #include "aoab_curl.h"
 #include "defs.pb.h"
 #include "facts.h"
+#include "utils.h"
+#include "historic_word_stats.h"
 
 using namespace google::protobuf;
 
-// Returns Authorization header Bearer {access token}
-
-using  id_map_t = std::map<std::string, std::string>;
 id_map_t
 fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
 {
@@ -53,7 +52,7 @@ fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
 }
 
 void
-fetch_part(curl& c, curlslistp& auth_header, const id_map_t::value_type& id, std::stringstream &ofs)
+fetch_part(curl& c, curlslistp& auth_header, const id_map_t::value_type& id, std::ostream &ofs)
 {
     std::stringstream url_ss;
     url_ss << "https://labs.j-novel.club/embed/" << id.first << "/data.xhtml";
@@ -67,159 +66,7 @@ fetch_part(curl& c, curlslistp& auth_header, const id_map_t::value_type& id, std
     }
 }
 
-using wordstat_map_t = std::map<id_map_t::value_type, int>;
-wordstat_map_t
-read_wordstat_file(std::filesystem::path filename)
-{
-    wordstat_map_t res;
-
-    std::fstream wordstats_is(filename, wordstats_is.in);
-    if (!wordstats_is.is_open()) {
-        try {
-            wordstats_is.exceptions(wordstats_is.failbit | wordstats_is.badbit);
-        } catch (std::ios_base::failure &e) {
-            throw std::system_error(e.code(), "Can't open wordstat file");
-        } catch (...) { throw; }
-    }
-
-    for (std::string line; std::getline(wordstats_is, line); ) {
-        // 12483,6384ed590517e1e171e6c551,ascendance-of-a-bookworm-part-5-volume-2-part-4
-        constexpr std::string_view delim{","};
-        auto r = std::views::split(line, delim);
-        auto it = r.begin();
-        int words;
-        auto fromchars_res = std::from_chars(std::to_address(std::ranges::begin(*it)),
-                                             std::to_address(std::ranges::end(*it)),
-                                             words);
-        if (fromchars_res.ec != std::errc()) {
-            throw std::system_error(std::make_error_code(fromchars_res.ec), "Couldn't parse words int from csv");
-        }
-        ++it; if (it == std::ranges::end(r)) throw std::system_error(std::make_error_code(std::errc::invalid_seek), "csv has less than 2 elements");
-        auto legacy_id = std::string_view(std::ranges::begin(*it), std::ranges::end(*it));
-        ++it; if (it == std::ranges::end(r)) throw std::system_error(std::make_error_code(std::errc::invalid_seek), "csv has less than 3 elements");
-        auto slug = std::string_view(std::ranges::begin(*it), std::ranges::end(*it));
-
-        res.try_emplace(id_map_t::value_type(legacy_id, slug), words);
-    }
-
-    return res;
-}
-
-void
-write_wordstat_file(std::filesystem::path filename, const wordstat_map_t& stats)
-{
-    std::fstream wordstats_os(filename, wordstats_os.out | wordstats_os.trunc);
-    if (!wordstats_os.is_open()) {
-        try {
-            wordstats_os.exceptions(wordstats_os.failbit | wordstats_os.badbit);
-        } catch (std::ios_base::failure &e) {
-            throw std::system_error(e.code(), "Can't open wordstat file for writing");
-        } catch (...) { throw; }
-        return;
-    }
-
-    for (const auto &stat : stats) {
-        wordstats_os << stat.second << ',' << stat.first.first << ',' << stat.first.second << '\n';
-    }
-
-    wordstats_os.close();
-    std::cout << "Wrote out " << filename << '\n';
-}
-
-class word_parser : public xmlpp::SaxParser
-{
-    public:
-    word_parser() {};
-    ~word_parser() override {};
-
-    int count() {
-        std::ranges::istream_view<std::string> v(ss);
-
-        return std::ranges::distance(v);
-    }
-protected:
-    void on_characters(const xmlpp::ustring& characters) override {
-        ss << characters;
-    };
-
-private:
-    std::stringstream ss;
-};
-
-
-int
-count_words(std::stringstream& ss)
-{
-    word_parser p;
-    p.parse_stream(ss);
-    return p.count();
-}
-
-std::string
-slug_to_short(std::string_view slug)
-{
-    constexpr std::string_view delim {"-"};
-    std::stringstream ss;
-    std::vector<std::string_view> words;
-    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4)) {
-        words.emplace_back(std::ranges::begin(word), std::ranges::end(word));
-    }
-
-    for (const auto &word : words | std::views::reverse |
-             std::views::drop(2) | std::views::reverse | std::views::take(4))
-    {
-        ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*word.begin())));
-    }
-
-    auto res = ss.str();
-    if (res.empty()) { return "P1V1"; }
-    if (res == "V1") return "P1V1";
-    if (res == "V2") return "P1V2";
-    return res;
-}
-
-std::string
-slug_to_series_part(std::string_view slug)
-{
-    constexpr std::string_view delim {"-"};
-    std::stringstream ss;
-    std::vector<std::string_view> words;
-    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4)) {
-        words.emplace_back(std::ranges::begin(word), std::ranges::end(word));
-    }
-
-    bool first = true;
-    for (const auto &word : words | std::views::reverse |
-             std::views::drop(2) | std::views::reverse | std::views::take(2))
-    {
-        ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*word.begin())));
-        ss << std::views::drop(word, 1);
-        if (first) {
-            ss << ' ';
-            first = false;
-        }
-    }
-
-    auto res = ss.str();
-    if (res.empty()) { return "Part 1"; }
-    if (res == "Volume 1") return "Part 1";
-    if (res == "Volume 2") return "Part 1";
-    return res;
-}
-
-std::string
-slug_to_volume_part(std::string_view slug)
-{
-    constexpr std::string_view delim {"-"};
-    std::stringstream ss;
-    std::vector<std::string_view> words;
-    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4)) {
-        words.emplace_back(std::ranges::begin(word), std::ranges::end(word));
-    }
-
-    if (words.empty()) return "1";
-    return std::string(*std::ranges::begin(std::views::take(std::views::reverse(words), 1)));
-}
+using wordstat_map_t = decltype(historic_word_stats::wordstats);
 
 void
 write_gnuplot_part(std::string_view vol, std::filesystem::path filename, std::string_view y, const wordstat_map_t &stats)
@@ -471,12 +318,11 @@ int main(int argc, char *argv[])
 
     try {
         curl c;
-        auto stats = read_wordstat_file(stats_path_in);
+        auto stats = historic_word_stats{stats_path_in};
         /* Fetch any new data & store to stats_path_out */
 
         auto cred = c.login();
         auto ids = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
-        bool modified = false;
         for (const auto& id : ids) {
             if (stats.contains(id)) continue;
             std::cout << "need to get " << id.second << '\n';
@@ -485,12 +331,11 @@ int main(int argc, char *argv[])
             auto cnt = count_words(ss);
             std::cout << "Got " << id.second << " (" << slug_to_short(id.second) << ")" << " which has " << cnt << " words\n";
             stats.emplace(id, cnt);
-            modified = true;
         }
-        if (modified) write_wordstat_file(stats_path_out, stats);
+        if (stats.modified) stats.write(stats_path_out);
 
         /* Write gnuplot files */
-        write_gnuplot(stats, gnuplot_dir);
+        write_gnuplot(stats.wordstats, gnuplot_dir);
     } catch (std::exception &e) {
         std::cerr << "Exception: " << e.what() << std::endl;
         return EXIT_FAILURE;

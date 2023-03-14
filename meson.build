@@ -42,4 +42,11 @@ date_dep = dependency('date',
                       fallback: ['hinnant-date', 'date_dep'],
                       default_options: ['use_system_tzdb=true'])
 
+boostut_dep = dependency('ut',
+                         method: 'cmake',
+                         modules: 'Boost::ut',
+                         fallback: ['boostut', 'boostut_dep'])
+
+add_project_arguments('-DBOOST_UT_DISABLE_MODULE', language: 'cpp')
+
 subdir('src')

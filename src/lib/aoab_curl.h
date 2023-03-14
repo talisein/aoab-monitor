@@ -65,8 +65,8 @@ public:
 
     CURLcode perform();
 
-    void set_get_opts(std::stringstream& write_stream, curlslistp& auth_header, std::string_view url);
-    void set_post_opts(std::stringstream& write_stream, std::stringstream &read_stream, curlslistp& auth_header, std::string_view url);
+    void set_get_opts(std::ostream& write_stream, curlslistp& auth_header, std::string_view url);
+    void set_post_opts(std::ostream& write_stream, std::istream &read_stream, curlslistp& auth_header, std::string_view url);
     struct credentials login();
 
 private:
