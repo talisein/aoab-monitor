@@ -133,7 +133,11 @@ historic_word_stats::write_volume_points(std::string_view vol, std::ostream &ofs
         auto prev_part_cnt = std::ranges::count_if(wordstats, [&stat, bucket, vol](const auto &st) {
             return bucket == to_bucket(st.second) &&
                 (
-                    (slug_to_series_part(st.first.second) < slug_to_series_part(stat.first.second)) ||
+                    (
+                        (slug_to_series_part(st.first.second) < slug_to_series_part(stat.first.second)) &&
+                        (is_ten_part(vol) || (is_eight_part(vol) && (!is_ten_part_slug(st.first.second))))
+                    )
+                    ||
                     (!is_ten_part_slug(st.first.second) && is_ten_part(vol))
                 );
         });

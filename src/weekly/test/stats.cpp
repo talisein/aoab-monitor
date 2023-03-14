@@ -20,6 +20,7 @@ int main() {
 12249,7cdb8260b7ba145b7e35442b,ascendance-of-a-bookworm-part-2-volume-1-part-1
 12249,8cdb8260b7ba145b7e35443b,ascendance-of-a-bookworm-part-2-volume-2-part-1
 12249,9cdb8260b7ba145b7e35443b,ascendance-of-a-bookworm-part-2-volume-4-part-1
+12249,9ddb8260b7ba145b7e35443b,ascendance-of-a-bookworm-part-3-volume-1-part-1
 )"};
 
     "read"_test = [&] {
@@ -29,7 +30,7 @@ int main() {
         expect(stats.contains(historic_word_stats::legacy_slug_t{"6cdb8260b7ba145b7e35441b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
         expect(!stats.contains(historic_word_stats::legacy_slug_t{"cdb8260b7ba145b7e35440b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
 
-        expect(std::ranges::equal(stats.volumes, std::initializer_list<std::string_view>{"P1V1", "P1V2", "P2V1", "P2V2", "P2V4"}));
+        expect(std::ranges::equal(stats.volumes, std::initializer_list<std::string_view>{"P1V1", "P1V2", "P2V1", "P2V2", "P2V4", "P3V1"}));
     };
 
     "write"_test = [&] {
@@ -86,7 +87,7 @@ int main() {
         ofs.str("");
         stats.write_volume_points("P2V2"sv, ofs);
         expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"
-12125	4.5	"P2V2"	1
+12125	5.5	"P2V2"	1
 )"sv));
     };
 
@@ -98,15 +99,26 @@ int main() {
         stats.write_volume_points("P2V2"sv, ofs);
         /* */
         expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"
-12125	4.5	"P2V2"	1
+12125	5.5	"P2V2"	1
 )"sv));
 
         /* P2V4 is an 8-part volume. There are 2 points from Part 1, so we are
-         * above that. */
+         * above that. But this function hasn't run on P2V1, so we start from the bottom of that box */
         ofs.str("");
         stats.write_volume_points("P2V4"sv, ofs);
         expect(eq(ofs.str(), R"(Words	y	"P2V4"	"Volume Part"
 12125	2.5	"P2V4"	1
+)"sv));
+    };
+
+    "write_volume_points_8part"_test = [&] {
+        std::ispanstream is {historic_test_data};
+        historic_word_stats stats {is};
+        std::ostringstream ofs;
+        stats.write_volume_points("P3V1"sv, ofs);
+        /* Must not count 10-part P2V2 */
+        expect(eq(ofs.str(), R"(Words	y	"P3V1"	"Volume Part"
+12125	4.5	"P3V1"	1
 )"sv));
     };
 }
