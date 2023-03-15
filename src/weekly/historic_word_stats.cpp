@@ -3,6 +3,7 @@
 #include <concepts>
 #include "historic_word_stats.h"
 #include "utils.h"
+#include "facts.h"
 
 namespace {
     constexpr auto BUCKET_SIZE { 500 };
@@ -34,6 +35,10 @@ namespace {
 
     constexpr auto TEN_PART_FILTER = std::views::filter(is_ten_part_slug);
 
+    auto get_part_filter(std::string_view vol)
+    {
+        return std::views::filter([vol](const auto& stat) { return slug_to_short(stat.first.second) == vol; });
+    }
 }
 
 historic_word_stats::historic_word_stats(std::istream &is)
@@ -113,20 +118,16 @@ historic_word_stats::write(std::ostream &os)
  * within each bucket. Will be called multiple times, so the stacking-up has to
  * continue (facilitated by seen_buckets list).
  *
- * Bucket  point   VolumeShortName   VolumePart, e.g.
- * 8125     0.5        "P1V1"             1
+ * Bucket  point   VolumeShortName   VolumePart     Words, e.g.
+ * 8125     0.5        "P1V1"             1          7990
  *
  * Points are offset by 0.5 so they float above the histogram box boundary.
- *
- * Returns the wordcount of the last part in the volume.
  */
-historic_word_stats::word_count_t
-historic_word_stats::write_volume_points(std::string_view vol, std::ostream &ofs)
+void
+historic_word_stats::write_histogram_volume_points(std::string_view vol, std::ostream &ofs)
 {
-    word_count_t res = 0;
-    ofs << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\n";
-    for (const auto &stat : wordstats) {
-        if (slug_to_short(stat.first.second) != vol) continue;
+    ofs << "Words\ty\t" << std::quoted(vol) << "\t\"Volume Part\"\tWords\n";
+    for (const auto &stat : wordstats | get_part_filter(vol)) {
         auto bucket = to_bucket(stat.second);
         /* */
         auto &seen_buckets = is_ten_part(vol) ? seen_buckets_10 : seen_buckets_8;
@@ -146,17 +147,105 @@ historic_word_stats::write_volume_points(std::string_view vol, std::ostream &ofs
         ofs << bucket + BUCKET_SIZE/4 << '\t'
             << y << ".5\t"
             << std::quoted(vol) << '\t'
-            << slug_to_volume_part(stat.first.second) << '\n';
-        res = stat.second;
+            << slug_to_volume_part(stat.first.second) << '\t'
+            << stat.second
+            << '\n';
     }
-    return res;
+}
+
+void
+historic_word_stats::write_histogram_volume_points(std::string_view vol, std::filesystem::path filename)
+{
+    std::fstream fs {filename, fs.out};
+    write_histogram_volume_points(vol, fs);
+    fs.close();
 }
 
 historic_word_stats::word_count_t
-historic_word_stats::write_volume_points(std::string_view vol, std::filesystem::path filename)
+historic_word_stats::get_volume_total_words(std::string_view vol)
+{
+
+    historic_word_stats::word_count_t sum = 0;
+    for (const auto &stat : wordstats | get_part_filter(vol))
+    {
+        sum += stat.second;
+    }
+    return sum;
+}
+
+int
+historic_word_stats::get_volume_last_part(std::string_view vol)
+{
+    auto r = std::views::reverse(wordstats | get_part_filter(vol));
+    return std::stoi(slug_to_volume_part(std::ranges::begin(r)->first.second));
+}
+
+
+historic_word_stats::word_count_t
+historic_word_stats::get_volume_last_part_words(std::string_view vol)
+{
+    auto r = std::views::reverse(wordstats | get_part_filter(vol));
+    return std::ranges::begin(r)->second;
+}
+
+/*
+ * Writes two points to make a horizontal line where a volume average is.
+ * If there's only 1 part in the volume so far, do not write any points
+ */
+void
+historic_word_stats::write_volume_word_average(std::string_view vol, std::ostream &ofs)
+{
+    auto max_parts = is_eight_part(vol) ? 8 : 10;
+    ofs << "Part\tWords\t\"" << vol << " Average\"\n";
+    int sum = 0;
+    auto r = wordstats | get_part_filter(vol);
+    const int parts = std::ranges::distance(r);
+    if (1 == parts) { // Don't plot average if there's only 1 part published
+        return;
+    }
+    for (const auto &stat : wordstats | get_part_filter(vol)) {
+        sum += stat.second;
+    }
+    ofs << 1 << '\t' << sum / parts << '\n';
+    ofs << max_parts << '\t' << sum / parts << '\n';
+}
+
+void
+historic_word_stats::write_volume_word_average(std::string_view vol, std::filesystem::path filename)
 {
     std::fstream fs {filename, fs.out};
-    auto res = write_volume_points(vol, fs);
+    write_volume_word_average(vol, fs);
     fs.close();
-    return res;
+}
+
+void
+historic_word_stats::write_projection(std::string_view cur_volume, std::string_view prev_volume, std::ostream &ofs)
+{
+    ofs << "Part\tWords\t\"" << cur_volume << " Projection\"\n";
+
+    const int current_total_parts = is_eight_part_slug(cur_volume) ? 8 : 10;
+
+    word_count_t current_last_part_words = get_volume_last_part_words(cur_volume);
+    int current_last_part = get_volume_last_part(cur_volume);
+    word_count_t current_total_words = get_volume_total_words(cur_volume);
+    word_count_t previous_total_words = get_volume_total_words(prev_volume);
+
+    if (current_last_part < current_total_parts && current_total_words < previous_total_words) {
+        const auto current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
+        const auto previous_jp_pages = aoab_facts::jp_page_lengths.at(prev_volume);
+        const auto ratio = current_jp_pages / previous_jp_pages;
+        ofs << current_last_part << '\t' << current_last_part_words << '\n';
+        const int word_deficit = static_cast<int>(previous_total_words*ratio) - current_total_words;
+        for (int i = current_last_part + 1; i <= current_total_parts; ++i) {
+            ofs << i << '\t' << word_deficit / (current_total_parts - current_last_part) << '\n';
+        }
+    }
+}
+
+void
+historic_word_stats::write_projection(std::string_view cur_volume, std::string_view prev_volume, std::filesystem::path filename)
+{
+    std::fstream fs {filename, fs.out};
+    write_projection(cur_volume, prev_volume, fs);
+    fs.close();
 }

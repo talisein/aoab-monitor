@@ -41,6 +41,17 @@ public:
     void write(std::ostream &os);
 
 
-    word_count_t write_volume_points(std::string_view vol, std::ostream &ofs);
-    word_count_t write_volume_points(std::string_view vol, std::filesystem::path filename);
+    void write_histogram_volume_points(std::string_view vol, std::ostream &ofs);
+    void write_histogram_volume_points(std::string_view vol, std::filesystem::path filename);
+
+    void write_volume_word_average(std::string_view vol, std::ostream &ofs);
+    void write_volume_word_average(std::string_view vol, std::filesystem::path filename);
+
+    void write_projection(std::string_view cur_volume, std::string_view prev_volume, std::ostream &ofs);
+    void write_projection(std::string_view cur_volume, std::string_view prev_volume, std::filesystem::path filename);
+
+    word_count_t get_volume_total_words(std::string_view vol);
+
+    int get_volume_last_part(std::string_view vol);
+    word_count_t get_volume_last_part_words(std::string_view vol);
 };

@@ -149,136 +149,22 @@ make_histomap(const wordstat_map_t &stats, const std::filesystem::path& filename
     }
 }
 
-int to_bucket(int count)
-{
-    // bucket 5500 has count 5250-5749
-    auto x = count + (BUCKET_SIZE/2);
-    // bucket 5500 has x 5500-5999
-    return x - (x % BUCKET_SIZE);
-}
-
-auto get_part_filter(std::string_view vol)
-{
-    return std::views::filter([vol](const auto& stat) { return slug_to_short(stat.first.second) == vol; });
-}
-
-template<typename R>
-int
-write_gnuplot_accum(std::string_view vol, std::filesystem::path filename, R &stats)
-{
-    std::fstream fs(filename, fs.out);
-
-    fs << "Part\tWords\t" << std::quoted(vol) << "\n0\t0\n";
-    int sum = 0;
-    for (const auto &stat : stats | get_part_filter(vol)) {
-        sum += stat.second;
-        fs << slug_to_volume_part(stat.first.second) << '\t';
-        fs << sum << '\n';
-    }
-    fs.close();
-    return sum;
-}
-
-template<typename R>
-int
-write_gnuplot_accum_summary(std::string_view vol, std::filesystem::path filename, R &stats)
-{
-    std::fstream fs(filename, fs.out);
-
-    fs << "Part\tWords\t" << std::quoted(vol) << "\n0\t0\n";
-    int sum = 0;
-    std::string last_part;
-    for (const auto &stat : stats | get_part_filter(vol)) {
-        sum += stat.second;
-        last_part = std::string(slug_to_volume_part(stat.first.second));
-    }
-    fs << last_part << '\t' << sum << '\n';
-    fs.close();
-
-    return sum;
-}
-
-template<typename R>
-int
-write_gnuplot_avg_summary(std::string_view vol, std::filesystem::path filename, R &stats, int max_parts)
-{
-    std::fstream fs(filename, fs.out);
-
-    fs << "Part\tWords\t\"" << vol << " Average\"\n";
-    int sum = 0;
-    std::string last_part;
-    auto r = stats | get_part_filter(vol);
-    const int parts = std::ranges::distance(r);
-    if (1 == parts) { // Don't plot average if there's only 1 part published
-        return std::stoi(std::string(slug_to_volume_part(std::ranges::begin(r)->first.second)));
-    }
-    for (const auto &stat : stats | get_part_filter(vol)) {
-        sum += stat.second;
-        last_part = std::string(slug_to_volume_part(stat.first.second));
-    }
-    fs << 1 << '\t' << sum / parts << '\n';
-    fs << max_parts << '\t' << sum / parts << '\n';
-    fs.close();
-    return std::stoi(last_part);
-}
-
 void
 write_gnuplot(historic_word_stats &wordstats, const std::filesystem::path& dir)
 {
     auto &stats = wordstats.wordstats;
 
-    std::fstream hist(dir / "hist.dat", hist.out);
+    auto prev_volume = *std::next(wordstats.volumes.crbegin());
+    auto cur_volume = *wordstats.volumes.crbegin();
 
-    std::set<std::string> volumes;
-    hist << "Words\tPart\n";
-    for (const auto &stat : stats) {
-        hist << stat.second << '\t' << std::quoted(slug_to_series_part(stat.first.second)) << '\n';
-        volumes.insert(slug_to_short(stat.first.second));
-    }
-    hist.close();
+    wordstats.write_histogram_volume_points(prev_volume, dir / "latest-1.dat");
+    wordstats.write_volume_word_average(prev_volume, dir / "latest-1-avg-1.dat");
 
-    auto r = stats | EIGHT_PART_FILTER;
-    wordstat_map_t eight_part_stats {std::ranges::begin(r), std::ranges::end(r)};
-    auto prev_volume = *std::next(volumes.crbegin());
-    auto cur_volume = *volumes.crbegin();
-    auto prev_stats = std::ranges::find(TEN_PART_VOLUMES, prev_volume) != std::ranges::end(TEN_PART_VOLUMES) ? stats : eight_part_stats;
-    auto cur_stats = std::ranges::find(TEN_PART_VOLUMES, cur_volume) != std::ranges::end(TEN_PART_VOLUMES) ? stats : eight_part_stats;
-//meow
-    const int current_total_parts = std::ranges::find(TEN_PART_VOLUMES, cur_volume) != std::ranges::end(TEN_PART_VOLUMES) ? 10 : 8;
-    const int prev_total_parts = std::ranges::find(TEN_PART_VOLUMES, prev_volume) != std::ranges::end(TEN_PART_VOLUMES) ? 10 : 8;
-    const int max_total_parts = std::max(current_total_parts, prev_total_parts);
+    wordstats.write_histogram_volume_points(cur_volume, dir / "latest.dat");
+    wordstats.write_volume_word_average(cur_volume, dir / "latest-avg-1.dat");
 
-    std::list<int> seen_buckets;
-    wordstats.write_volume_points(prev_volume, dir / "latest-1.dat");
-    write_gnuplot_accum(prev_volume, dir / "latest-1-accum-1.dat", prev_stats);
-    int previous_words = write_gnuplot_accum_summary(prev_volume, dir / "latest-1-accum-2.dat", prev_stats);
-    write_gnuplot_avg_summary(prev_volume, dir / "latest-1-avg-1.dat", prev_stats, max_total_parts);
+    wordstats.write_projection(cur_volume, prev_volume, dir / "latest-proj.dat");
 
-    write_gnuplot_accum(cur_volume, dir / "latest-accum-1.dat", cur_stats);
-    int current_words = write_gnuplot_accum(cur_volume, dir / "latest-accum-2.dat", cur_stats);
-    int last_point = wordstats.write_volume_points(cur_volume, dir / "latest.dat");
-    int current_last_part = write_gnuplot_avg_summary(cur_volume, dir / "latest-avg-1.dat", cur_stats, max_total_parts);
-
-    std::fstream fs(dir / "latest-proj.dat", fs.out);
-    fs << "Part\tWords\t\"" << cur_volume << " Projection\"\n";
-    if (current_last_part < current_total_parts && current_words < previous_words) {
-        const auto current_jp_pages = *volumes.crbegin();
-        const auto previous_jp_pages = *std::next(volumes.crbegin());
-        const auto ratio = aoab_facts::jp_page_lengths.at(current_jp_pages) / aoab_facts::jp_page_lengths.at(previous_jp_pages);
-        fs << current_last_part << '\t' << last_point << '\n';
-        const int word_deficit = static_cast<int>(previous_words*ratio) - current_words;
-        for (int i = current_last_part + 1; i <= current_total_parts; ++i) {
-            fs << i << '\t' << word_deficit / (current_total_parts - current_last_part) << '\n';
-        }
-        fs.close();
-    }
-
-    /*
-    ++it;
-    write_gnuplot_part(*it, dir / "latest-2.dat", "7.5", stats);
-    ++it;
-    write_gnuplot_part(*it, dir / "latest-3.dat", "10", stats);
-    */
     make_histomap(stats, dir / "histo.dat");
 }
 

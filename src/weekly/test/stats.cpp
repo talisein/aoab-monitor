@@ -48,77 +48,111 @@ int main() {
         expect(stats.modified);
     };
 
-    "write_volume_points"_test = [&] {
+    "write_histogram_volume_points"_test = [&] {
         std::ispanstream is {historic_test_data};
         historic_word_stats stats {is};
         std::ostringstream ofs;
-        stats.write_volume_points("P1V1"sv, ofs);
-        expect(eq(ofs.str(), R"(Words	y	"P1V1"	"Volume Part"
-12125	0.5	"P1V1"	1
-8125	0.5	"P1V1"	2
-11625	0.5	"P1V1"	3
-10625	0.5	"P1V1"	4
-10125	0.5	"P1V1"	5
-8125	1.5	"P1V1"	6
-14125	0.5	"P1V1"	7
-10125	1.5	"P1V1"	8
+        stats.write_histogram_volume_points("P1V1"sv, ofs);
+        expect(eq(ofs.str(), R"(Words	y	"P1V1"	"Volume Part"	Words
+12125	0.5	"P1V1"	1	11918
+8125	0.5	"P1V1"	2	7990
+11625	0.5	"P1V1"	3	11460
+10625	0.5	"P1V1"	4	10297
+10125	0.5	"P1V1"	5	9829
+8125	1.5	"P1V1"	6	8081
+14125	0.5	"P1V1"	7	14204
+10125	1.5	"P1V1"	8	9957
 )"sv));
 
         ofs.str("");
-        stats.write_volume_points("P1V2"sv, ofs);
-        expect(eq(ofs.str(), R"(Words	y	"P1V2"	"Volume Part"
-12125	1.5	"P1V2"	1
-12625	0.5	"P1V2"	2
+        stats.write_histogram_volume_points("P1V2"sv, ofs);
+        expect(eq(ofs.str(), R"(Words	y	"P1V2"	"Volume Part"	Words
+12125	1.5	"P1V2"	1	12249
+12625	0.5	"P1V2"	2	12410
 )"sv));
     };
 
-    "write_volume_points_part2"_test = [&] {
+    "write_histogram_volume_points_part2"_test = [&] {
         std::ispanstream is {historic_test_data};
         historic_word_stats stats {is};
         std::ostringstream ofs;
-        stats.write_volume_points("P2V1"sv, ofs);
+        stats.write_histogram_volume_points("P2V1"sv, ofs);
         /* There are 2 points in this bucket from Part 1,
          * so need to start from 2 */
-        expect(eq(ofs.str(), R"(Words	y	"P2V1"	"Volume Part"
-12125	2.5	"P2V1"	1
+        expect(eq(ofs.str(), R"(Words	y	"P2V1"	"Volume Part"	Words
+12125	2.5	"P2V1"	1	12249
 )"sv));
 
         /* P2V2 is a 10-part volume. 10-parts above all 8-parts. */
         ofs.str("");
-        stats.write_volume_points("P2V2"sv, ofs);
-        expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"
-12125	5.5	"P2V2"	1
+        stats.write_histogram_volume_points("P2V2"sv, ofs);
+        expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"	Words
+12125	5.5	"P2V2"	1	12249
 )"sv));
     };
 
-    "write_volume_points_10part"_test = [&] {
+    "write_histogram_volume_points_10part"_test = [&] {
         /* P2V2 is a 10-part volume. 10-part boxes are placed above all 8-part boxes. */
         std::ispanstream is {historic_test_data};
         historic_word_stats stats {is};
         std::ostringstream ofs;
-        stats.write_volume_points("P2V2"sv, ofs);
+        stats.write_histogram_volume_points("P2V2"sv, ofs);
         /* */
-        expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"
-12125	5.5	"P2V2"	1
+        expect(eq(ofs.str(), R"(Words	y	"P2V2"	"Volume Part"	Words
+12125	5.5	"P2V2"	1	12249
 )"sv));
 
         /* P2V4 is an 8-part volume. There are 2 points from Part 1, so we are
          * above that. But this function hasn't run on P2V1, so we start from the bottom of that box */
         ofs.str("");
-        stats.write_volume_points("P2V4"sv, ofs);
-        expect(eq(ofs.str(), R"(Words	y	"P2V4"	"Volume Part"
-12125	2.5	"P2V4"	1
+        stats.write_histogram_volume_points("P2V4"sv, ofs);
+        expect(eq(ofs.str(), R"(Words	y	"P2V4"	"Volume Part"	Words
+12125	2.5	"P2V4"	1	12249
 )"sv));
     };
 
-    "write_volume_points_8part"_test = [&] {
+    "write_histogram_volume_points_8part"_test = [&] {
         std::ispanstream is {historic_test_data};
         historic_word_stats stats {is};
         std::ostringstream ofs;
-        stats.write_volume_points("P3V1"sv, ofs);
+        stats.write_histogram_volume_points("P3V1"sv, ofs);
         /* Must not count 10-part P2V2 */
-        expect(eq(ofs.str(), R"(Words	y	"P3V1"	"Volume Part"
-12125	4.5	"P3V1"	1
+        expect(eq(ofs.str(), R"(Words	y	"P3V1"	"Volume Part"	Words
+12125	4.5	"P3V1"	1	12249
+)"sv));
+    };
+
+    "write_volume_word_average"_test = [&] {
+        std::ispanstream is {historic_test_data};
+        historic_word_stats stats {is};
+        std::ostringstream ofs;
+        stats.write_volume_word_average("P1V1"sv, ofs);
+
+        expect(eq(ofs.str(), R"(Part	Words	"P1V1 Average"
+1	10467
+8	10467
+)"sv));
+
+        ofs.str("");
+        stats.write_volume_word_average("P3V1"sv, ofs);
+        expect(eq(ofs.str(), R"(Part	Words	"P3V1 Average"
+)"sv));
+    };
+
+    "write_projection"_test = [&] {
+        std::ispanstream is {historic_test_data};
+        historic_word_stats stats {is};
+        std::ostringstream ofs;
+        stats.write_projection("P1V2"sv, "P1V1"sv, ofs);
+
+        expect(eq(ofs.str(), R"(Part	Words	"P1V2 Projection"
+2	12410
+3	8295
+4	8295
+5	8295
+6	8295
+7	8295
+8	8295
 )"sv));
     };
 }
