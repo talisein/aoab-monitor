@@ -155,4 +155,27 @@ int main() {
 8	8295
 )"sv));
     };
+
+    "write_histogram"_test = [&] {
+        std::ispanstream is {historic_test_data};
+        historic_word_stats stats {is};
+        std::ostringstream ofs;
+        stats.write_histogram(ofs);
+        expect(eq(ofs.str(), R"(Bucket	"Part 1"	"Part 2"	"Part 3"	"10-part Part 2"	"10-part Part 3"	"10-part Part 5"
+7500	0	0	0	0	0	0
+8000	2	0	0	0	0	0
+8500	0	0	0	0	0	0
+9000	0	0	0	0	0	0
+9500	0	0	0	0	0	0
+10000	2	0	0	0	0	0
+10500	1	0	0	0	0	0
+11000	0	0	0	0	0	0
+11500	1	0	0	0	0	0
+12000	2	2	1	1	0	0
+12500	1	0	0	0	0	0
+13000	0	0	0	0	0	0
+13500	0	0	0	0	0	0
+14000	1	0	0	0	0	0
+)"sv));
+    };
 }

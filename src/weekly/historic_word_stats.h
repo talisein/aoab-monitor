@@ -17,6 +17,7 @@ struct historic_word_stats
 {
     using word_count_t = int;
     using legacy_slug_t = id_map_t::value_type;
+
     std::map<legacy_slug_t, word_count_t> wordstats;
     bool modified;
     std::set<std::string> volumes; // P1V1, P1V2, etc
@@ -25,6 +26,7 @@ struct historic_word_stats
 
 private:
     void read(std::istream &is);
+    std::pair<word_count_t, word_count_t> get_limits();
 
 public:
     historic_word_stats(std::istream &is);
@@ -40,6 +42,9 @@ public:
     void write(std::filesystem::path filename);
     void write(std::ostream &os);
 
+
+    void write_histogram(std::ostream &ofs);
+    void write_histogram(std::filesystem::path filename);
 
     void write_histogram_volume_points(std::string_view vol, std::ostream &ofs);
     void write_histogram_volume_points(std::string_view vol, std::filesystem::path filename);

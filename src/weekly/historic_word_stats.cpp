@@ -31,13 +31,24 @@ namespace {
         return is_eight_part(slug_to_short(slug));
     }
 
-    constexpr auto EIGHT_PART_FILTER = std::views::filter(is_eight_part_slug);
+    constexpr auto EIGHT_PART_FILTER = std::views::filter([](const auto &stat) {
+        return is_eight_part_slug(stat.first.second);
+    });
 
-    constexpr auto TEN_PART_FILTER = std::views::filter(is_ten_part_slug);
+    constexpr auto TEN_PART_FILTER = std::views::filter([](const auto &stat) {
+        return is_ten_part_slug(stat.first.second);
+    });
+
 
     auto get_part_filter(std::string_view vol)
     {
         return std::views::filter([vol](const auto& stat) { return slug_to_short(stat.first.second) == vol; });
+    }
+
+    bool
+    in_bucket(int words, int bucket_start)
+    {
+        return words >= (bucket_start - (BUCKET_SIZE/2)) && words < (bucket_start + (BUCKET_SIZE/2));
     }
 }
 
@@ -248,4 +259,61 @@ historic_word_stats::write_projection(std::string_view cur_volume, std::string_v
     std::fstream fs {filename, fs.out};
     write_projection(cur_volume, prev_volume, fs);
     fs.close();
+}
+void
+historic_word_stats::write_histogram(std::ostream &ofs)
+{
+    auto limits = get_limits();
+
+    std::set<std::string> parts;
+    std::ranges::copy(wordstats | std::views::transform([](const auto &stat) { return slug_to_series_part(stat.first.second); }), std::inserter(parts, parts.end()));
+    ofs << "Bucket\t";
+    for (const auto &x : parts) {
+        ofs << std::quoted(x) << '\t';
+    }
+    ofs << std::quoted("10-part Part 2");
+    ofs << '\t' << std::quoted("10-part Part 3");
+    ofs << '\t' << std::quoted("10-part Part 5");
+    ofs << '\n';
+
+
+    auto eight_part_stats = wordstats | EIGHT_PART_FILTER;
+    for (int bucket = limits.first; bucket < limits.second; bucket += BUCKET_SIZE)
+    {
+        ofs << bucket;
+        for (const auto &part : parts) {
+            auto cnt = std::ranges::count_if(eight_part_stats, [&part, bucket](const auto &stat) { auto thispart = slug_to_series_part(stat.first.second); return part == thispart && in_bucket(stat.second, bucket); });
+            ofs << '\t' << cnt;
+        }
+        for (const auto &part : {"Part 2", "Part 3", "Part 5"}) {
+            ofs << '\t' << std::ranges::count_if(TEN_PART_FILTER(wordstats),
+                                                 [&part, bucket](const auto &stat) {
+                                                     auto thispart = slug_to_series_part(stat.first.second);
+                                                     return thispart == part && in_bucket(stat.second, bucket); });
+        }
+        ofs << '\n';
+    }
+
+}
+
+void
+historic_word_stats::write_histogram(std::filesystem::path filename)
+{
+    std::fstream fs {filename, fs.out};
+    write_histogram(fs);
+    fs.close();
+}
+
+std::pair<historic_word_stats::word_count_t, historic_word_stats::word_count_t>
+historic_word_stats::get_limits()
+{
+    auto [min, max] = std::ranges::minmax(wordstats | std::views::transform(&decltype(wordstats)::value_type::second));
+
+    auto minrem = min % BUCKET_SIZE;
+    auto maxrem = max % BUCKET_SIZE;
+    auto maxadd = maxrem == 0 ? 0 : BUCKET_SIZE;
+
+    // Round min down, round max up
+    // 7301, 19158 -> 7000, 19500
+    return {min - minrem, max + maxadd - maxrem};
 }
