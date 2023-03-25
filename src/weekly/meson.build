@@ -1,13 +1,11 @@
 
 weekly_src = [
   'parts.cpp',
-  'utils.cpp',
   'historic_word_stats.cpp',
 ]
 
 weekly_deps = [
   lib_dep,
-  libxmlpp_dep,
 ]
 
 partget_exe = executable('partget', weekly_src, lib_generated_src,
@@ -15,7 +13,7 @@ partget_exe = executable('partget', weekly_src, lib_generated_src,
                          install: true)
 
 
-stats_test_exe = executable('test-stats', 'historic_word_stats.cpp', 'test/stats.cpp', 'utils.cpp',
+stats_test_exe = executable('test-stats', 'historic_word_stats.cpp', 'test/stats.cpp',
                             dependencies: [weekly_deps, boostut_dep],
                             install: false)
 

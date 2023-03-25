@@ -10,6 +10,7 @@
 #include "date/date.h"
 #include "aoab_curl.h"
 #include "defs.pb.h"
+#include "utils.h"
 
 using namespace google::protobuf;
 
@@ -73,7 +74,7 @@ static void ts_to_ostream(std::ostream &os, const timestamp& ts)
     os << date::format("%e %B %Y", sec);
 }
 
-void write_next(auto ts) {
+void write_next(int vol, auto ts) {
     std::ofstream out("next.html");
     out << R"html(<!DOCTYPE html>
 <html>
@@ -105,11 +106,12 @@ tr:nth-child(even) {background-color: #f2f2f2;}
   </tr>
 )html";
 
-    for ( int i = 1; i < 9; ++i) {
-        auto nextts = std::chrono::seconds(ts.epoch_seconds()) + std::chrono::weeks(i*8);
+    auto weeks = std::chrono::weeks(8);
+    for (int i = vol+1; i <= 12; ++i, weeks += std::chrono::weeks(8)) {
+        auto nextts = std::chrono::seconds(ts.epoch_seconds()) + weeks;
         std::stringstream ss;
         ss << "\t<tr>\n";
-        ss << "\t\t<td>" << "Part 5 Volume " << (2 + i) << "</td>\n";
+        ss << "\t\t<td>" << "Part 5 Volume " << i << "</td>\n";
         ss << "\t\t<td class=\"righted\">";
         ss << date::format("%e %B %Y", date::sys_seconds(nextts - std::chrono::weeks(13)));
         ss << "</td>\n";
@@ -214,6 +216,24 @@ static void print_human(std::vector<book> &books)
     std::ofstream out("index.html");
 
     out << R"html(<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <html>
 <style>
 
@@ -273,7 +293,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 </html>
 )html";
 
-    write_next(books.begin()->volume().publishing());
+    write_next(slug_to_volume_number(books.begin()->volume().slug()), books.begin()->volume().publishing());
 }
 
 

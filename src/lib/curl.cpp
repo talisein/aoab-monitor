@@ -182,7 +182,7 @@ curl::set_get_opts(std::ostream& write_stream, curlslistp& auth_header, std::str
 }
 
 void
-curl::set_post_opts(std::ostream& write_stream, std::istream &read_stream, curlslistp& auth_header, std::string_view url)
+curl::set_post_opts(std::ostream& write_stream, std::istream &read_stream, std::string_view url)
 {
     reset();
     setopt(CURLOPT_USERAGENT, std::to_address(USERAGENT.begin()));
