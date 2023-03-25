@@ -107,13 +107,19 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 )html";
 
     auto weeks = std::chrono::weeks(8);
+    using namespace std::chrono_literals;
+    constexpr auto pub_date_1 = std::chrono::sys_days{std::chrono::May/31/2023};
+    constexpr auto pub_date_2 = std::chrono::sys_days{std::chrono::March/13/2023};
+    constexpr auto pub_lag = pub_date_1 - pub_date_2;
+
     for (int i = vol+1; i <= 12; ++i, weeks += std::chrono::weeks(8)) {
         auto nextts = std::chrono::seconds(ts.epoch_seconds()) + weeks;
         std::stringstream ss;
         ss << "\t<tr>\n";
         ss << "\t\t<td>" << "Part 5 Volume " << i << "</td>\n";
         ss << "\t\t<td class=\"righted\">";
-        ss << date::format("%e %B %Y", date::sys_seconds(nextts - std::chrono::weeks(13)));
+
+        ss << date::format("%e %B %Y", date::sys_seconds(nextts - pub_lag));
         ss << "</td>\n";
         ss << "\t\t<td class=\"righted\">";
         ss << date::format("%e %B %Y", date::sys_seconds(nextts));
