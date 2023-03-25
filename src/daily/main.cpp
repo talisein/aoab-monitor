@@ -112,17 +112,31 @@ tr:nth-child(even) {background-color: #f2f2f2;}
     constexpr auto pub_date_2 = std::chrono::sys_days{std::chrono::March/13/2023};
     constexpr auto pub_lag = pub_date_1 - pub_date_2;
 
+    const std::chrono::sys_days rootts = std::chrono::round<std::chrono::days>(std::chrono::sys_seconds(std::chrono::seconds(ts.epoch_seconds())));
     for (int i = vol+1; i <= 12; ++i, weeks += std::chrono::weeks(8)) {
-        auto nextts = std::chrono::seconds(ts.epoch_seconds()) + weeks;
+        std::chrono::sys_days nextts {rootts + weeks};
         std::stringstream ss;
         ss << "\t<tr>\n";
         ss << "\t\t<td>" << "Part 5 Volume " << i << "</td>\n";
         ss << "\t\t<td class=\"righted\">";
 
-        ss << date::format("%e %B %Y", date::sys_seconds(nextts - pub_lag));
+        std::chrono::sys_days streaming_date_close {nextts - pub_lag};
+        date::year_month_day streaming_date {streaming_date_close};
+        /* Find closest Monday */
+        for (std::chrono::days i = std::chrono::days(0); i < std::chrono::days(5); ++i) {
+            if ((std::chrono::weekday(streaming_date_close) + i) == std::chrono::Monday) {
+                streaming_date = date::year_month_day{streaming_date_close + i};
+                break;
+            }
+            if ((std::chrono::weekday(streaming_date_close) - i) == std::chrono::Monday) {
+                streaming_date = date::year_month_day{streaming_date_close - i};
+                break;
+            }
+        }
+        ss << date::format("%e %B %Y", streaming_date);
         ss << "</td>\n";
         ss << "\t\t<td class=\"righted\">";
-        ss << date::format("%e %B %Y", date::sys_seconds(nextts));
+        ss << date::format("%e %B %Y", nextts);
         ss << "</td>\n";
 
         ss << "\t</tr>\n";
@@ -288,7 +302,8 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 
     auto part_view = books | is_part_5_filter;
     auto last_part = std::ranges::max(part_view, std::ranges::less{}, [](const auto& x) { return slug_to_volume_number(x.volume().slug()); });
-    write_next(slug_to_volume_number(last_part.volume().slug()), last_part.volume().publishing());
+    write_next(slug_to_volume_number(last_part.volume().slug()),
+               last_part.volume().publishing());
 }
 
 
