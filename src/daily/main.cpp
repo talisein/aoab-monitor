@@ -160,6 +160,10 @@ static void print_human(std::vector<book> &books)
         [](const auto &book) {
             return std::string::npos == book.volume().title().find("Part"sv);
         });
+    auto is_part_5_filter = std::ranges::views::filter(
+        [](const auto &book) {
+            return std::string::npos != book.volume().title().find("Part 5"sv);
+        });
 
     using interpart_durations_t = std::map<std::string, std::optional<std::chrono::days>>;
     interpart_durations_t interpart_durations;
@@ -216,24 +220,6 @@ static void print_human(std::vector<book> &books)
     std::ofstream out("index.html");
 
     out << R"html(<!DOCTYPE html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 <html>
 <style>
 
@@ -293,7 +279,10 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 </html>
 )html";
 
-    write_next(slug_to_volume_number(books.begin()->volume().slug()), books.begin()->volume().publishing());
+
+    auto part_view = books | is_part_5_filter;
+    auto last_part = std::ranges::max(part_view, std::ranges::less{}, [](const auto& x) { return slug_to_volume_number(x.volume().slug()); });
+    write_next(slug_to_volume_number(last_part.volume().slug()), last_part.volume().publishing());
 }
 
 
