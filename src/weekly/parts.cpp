@@ -18,10 +18,11 @@
 #include "facts.h"
 #include "utils.h"
 #include "historic_word_stats.h"
+#include "volume.h"
 
 using namespace google::protobuf;
 
-id_map_t
+std::vector<volume>
 fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
 {
     std::stringstream url_ss;
@@ -37,25 +38,26 @@ fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
         throw std::runtime_error("Failed to fetch library_response");
     }
 
-    toc_response r;
+    jnovel::api::toc_response r;
     auto parsed = r.ParseFromIstream(&ss);
     if (!parsed) {
         throw std::runtime_error("failed to parse parts_response");
     }
 
-    id_map_t res;
+    std::vector<volume> res;
+//    res.reserve(r.parts().parts_size());
     for (auto &part : r.parts().parts()) {
-        res.try_emplace(part.legacyid(), part.slug());
+        res.emplace_back(part);
     }
 
     return res;
 }
 
 void
-fetch_part(curl& c, curlslistp& auth_header, const id_map_t::value_type& id, std::ostream &ofs)
+fetch_part(curl& c, curlslistp& auth_header, const legacy_id_t& id, std::ostream &ofs)
 {
     std::stringstream url_ss;
-    url_ss << "https://labs.j-novel.club/embed/" << id.first << "/data.xhtml";
+    url_ss << "https://labs.j-novel.club/embed/" << id << "/data.xhtml";
     auto url = url_ss.str();
 
     c.set_get_opts(ofs, auth_header, url);
@@ -101,15 +103,15 @@ int main(int argc, char *argv[])
 
         /* Fetch any new data & store to stats_path_out */
         auto cred = c.login();
-        auto ids = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
-        for (const auto& id : ids) {
-            if (stats.contains(id)) continue;
-            std::cout << "need to get " << id.second << '\n';
+        auto volumes = fetch_partlist(c, cred.auth_header, "ascendance-of-a-bookworm");
+        for (const auto& vol : volumes) {
+            if (stats.contains(vol)) continue;
+            std::cout << "need to get " << vol.slug << '\n';
             std::stringstream ss;
-            fetch_part(c, cred.auth_header, id, ss);
+            fetch_part(c, cred.auth_header, vol.legacy_id, ss);
             auto cnt = count_words(ss);
-            std::cout << "Got " << id.second << " (" << slug_to_short(id.second) << ")" << " which has " << cnt << " words\n";
-            stats.emplace(id, cnt);
+            std::cout << "Got " << vol.slug << " (" << slug_to_short(vol.slug) << ")" << " which has " << cnt << " words\n";
+            stats.emplace(vol, cnt);
         }
         if (stats.modified) stats.write(stats_path_out);
 

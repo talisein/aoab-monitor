@@ -9,6 +9,7 @@ lib_generated_src = lib_gen.process('defs.proto')
 lib_src = [
   'curl.cpp',
   'utils.cpp',
+  'volume.cpp',
 ]
 
 lib_deps = [curl_dep, protobuf_dep, date_dep, libxmlpp_dep]
@@ -19,6 +20,7 @@ lib = static_library('aoabmonitor', lib_src, lib_generated_src,
 
 lib_dep = declare_dependency(link_with: lib,
                              dependencies: lib_deps,
+                             sources: lib_generated_src,
                              include_directories: include_directories('./'))
 
 

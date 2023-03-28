@@ -14,7 +14,7 @@
 
 using namespace google::protobuf;
 
-static std::vector<book>
+static std::vector<jnovel::api::book>
 fetch_library(curl& c, curlslistp& auth_header)
 {
     std::stringstream ss;
@@ -25,7 +25,7 @@ fetch_library(curl& c, curlslistp& auth_header)
         throw std::runtime_error("Failed to fetch library_response");
     }
 
-    library_response res;
+    jnovel::api::library_response res;
     auto parsed = res.ParseFromIstream(&ss);
     if (!parsed) {
         throw std::runtime_error("Failed to parse library_response");
@@ -37,7 +37,7 @@ fetch_library(curl& c, curlslistp& auth_header)
     return {std::ranges::begin(res.books()), std::ranges::end(res.books())};
 }
 
-static void print_json(std::vector<book> &books)
+static void print_json(std::vector<jnovel::api::book> &books)
 {
     // sort by lastUpdated
     std::ranges::sort(books, std::ranges::greater{},
@@ -67,7 +67,7 @@ static void print_json(std::vector<book> &books)
     std::cout << "\n}\n";
 }
 
-static void ts_to_ostream(std::ostream &os, const timestamp& ts)
+static void ts_to_ostream(std::ostream &os, const jnovel::api::timestamp& ts)
 {
     date::sys_seconds sec(std::chrono::seconds(ts.epoch_seconds()));
     //   os << date::format("%e %B %Y-W%V-%u", sec);
@@ -150,7 +150,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 
 }
 
-static void print_human(std::vector<book> &books)
+static void print_human(std::vector<jnovel::api::book> &books)
 {
     using namespace std::string_view_literals;
     // sort by lastUpdated
@@ -284,7 +284,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
     <th>Days</th>
 )html";
 
-    if (std::ranges::any_of(books | filter | manga_filter, &book::has_lastupdated)) {
+    if (std::ranges::any_of(books | filter | manga_filter, &jnovel::api::book::has_lastupdated)) {
         out << R"html(<th>Updated</th>
   </tr>
 )html";

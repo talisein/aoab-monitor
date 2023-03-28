@@ -9,6 +9,6 @@ daily_deps = [
   date_dep,
 ]
 
-daily_exe = executable('aoab-monitor', daily_src, lib_generated_src,
+daily_exe = executable('aoab-monitor', daily_src,
                        dependencies: daily_deps,
                        install: true)

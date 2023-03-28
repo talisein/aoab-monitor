@@ -27,8 +27,8 @@ int main() {
         std::ispanstream is {historic_test_data};
         historic_word_stats stats {is};
 
-        expect(stats.contains(historic_word_stats::legacy_slug_t{"6cdb8260b7ba145b7e35441b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
-        expect(!stats.contains(historic_word_stats::legacy_slug_t{"cdb8260b7ba145b7e35440b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
+        expect(stats.contains(volume{"6cdb8260b7ba145b7e35441b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
+        expect(!stats.contains(volume{"cdb8260b7ba145b7e35440b","ascendance-of-a-bookworm-part-1-volume-2-part-2"}));
 
         expect(std::ranges::equal(stats.volumes, std::initializer_list<std::string_view>{"P1V1", "P1V2", "P2V1", "P2V2", "P2V4", "P3V1"}));
     };
@@ -42,7 +42,7 @@ int main() {
         expect(!stats.modified);
 
         os.str("");
-        stats.emplace(historic_word_stats::legacy_slug_t{"1abc","slug"}, 2);
+        stats.emplace(volume{"1abc","slug"}, 2);
         stats.write(os);
         expect(neq(os.str(), historic_test_data));
         expect(stats.modified);

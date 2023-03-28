@@ -1,4 +1,5 @@
 syntax = "proto3";
+package jnovel.api;
 
 message toc_response {
    parts_response parts = 1;

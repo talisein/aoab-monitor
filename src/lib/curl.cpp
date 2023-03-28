@@ -117,7 +117,7 @@ CURLcode curl::perform()
 struct credentials
 curl::login()
 {
-    login_request l;
+    jnovel::api::login_request l;
     std::stringstream ss_out, ss_in;
     const char *username = getenv("JNC_USERNAME");
     const char *password = getenv("JNC_PASSWORD");
@@ -150,7 +150,7 @@ curl::login()
         throw std::runtime_error("Failed to login");
     }
 
-    login_response r;
+    jnovel::api::login_response r;
     auto parsed = r.ParseFromIstream(&ss_in);
     if (!parsed) {
         throw std::runtime_error("failed to parse login_response");

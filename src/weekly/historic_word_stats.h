@@ -8,6 +8,7 @@
 #include <ranges>
 #include <string_view>
 #include <system_error>
+#include "volume.h"
 
 using legacy_id_t = std::string;
 using slug_t = std::string;
@@ -18,7 +19,7 @@ struct historic_word_stats
     using word_count_t = int;
     using legacy_slug_t = id_map_t::value_type;
 
-    std::map<legacy_slug_t, word_count_t> wordstats;
+    std::map<volume, word_count_t> wordstats;
     bool modified;
     std::set<std::string> volumes; // P1V1, P1V2, etc
     std::list<word_count_t> seen_buckets_8;
