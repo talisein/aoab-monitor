@@ -39,7 +39,7 @@ libxmlpp_dep = dependency('libxml++-5.0',
                                             'maintainer-mode=false'])
 
 date_dep = dependency('date',
-                      fallback: ['hinnant-date', 'date_dep'],
+                      fallback: ['hinnant-date', 'tz_dep'],
                       default_options: ['use_system_tzdb=true'])
 
 boostut_dep = dependency('ut',
