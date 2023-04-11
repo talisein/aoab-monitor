@@ -11,7 +11,7 @@
 #include "aoab_curl.h"
 #include "defs.pb.h"
 #include "utils.h"
-
+#include "date/tz.h"
 using namespace google::protobuf;
 
 static std::vector<jnovel::api::book>
@@ -262,8 +262,42 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 <h2>Ascendence of a Bookworm Releases</h2>
 <p><a href="stats">Weekly Statistics</a></p>
 <p><a href="next.html">Future Volume Release Day Estimates</a></p>
+<p>Discord Timestamp for next release &lt;t:)html";
+    using namespace std::chrono_literals;
+    auto zone = date::locate_zone("America/Los_Angeles");
+    const date::zoned_time zt{zone, std::chrono::system_clock::now()};
+    auto now = zt.get_local_time();
+    auto now_days = date::floor<date::days>(now);
+    auto now_weekday = date::weekday(now_days);
+    date::local_days next_monday;
+    if (now_weekday == date::Tuesday) {
+        next_monday = now_days + date::days(6);
+    } else if (now_weekday == date::Wednesday) {
+        next_monday = now_days + date::days(5);
+    } else if (now_weekday == date::Thursday) {
+        next_monday = now_days + date::days(4);
+    } else if (now_weekday == date::Friday) {
+        next_monday = now_days + date::days(3);
+    } else if (now_weekday == date::Saturday) {
+        next_monday = now_days + date::days(2);
+    } else if (now_weekday == date::Sunday) {
+        next_monday = now_days + date::days(1);
+    } else if (now_weekday == date::Monday) {
+        date::zoned_time threshold{zone, now_days + 14h};
+        if (now < threshold.get_local_time()) {
+            next_monday = now_days;
+        } else {
+            next_monday = now_days + date::days(7);
+        }
+    }
 
-<table>
+    auto next_drop = date::zoned_time{zone, next_monday + 14h};
+    date::sys_seconds zero_utc{};
+    out << (next_drop.get_sys_time() - zero_utc).count();
+
+    out << R"html(:f&gt;</p>
+)html";
+    out << R"html(<table>
   <tr>
     <th>Title</th>
     <th>Published</th>
