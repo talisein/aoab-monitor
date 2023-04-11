@@ -60,6 +60,12 @@ jobs:
           ref: gh-pages
           clean: false
 
+      - name: RunDaily
+        env:
+          JNC_USERNAME: ${{ secrets.JNC_USERNAME }}
+          JNC_PASSWORD: ${{ secrets.JNC_PASSWORD }}
+        run: _build/src/daily/aoab-monitor > updates.json
+
       - name: Make pages
         run: |
           cp plotdata/plot.png stats/plot.png
@@ -70,5 +76,5 @@ jobs:
         id: auto-commit-action
         with:
           commit_message: Auto-update
-          file_pattern: stats/plot.png stats/projection.png stats/word_stats.csv
+          file_pattern: stats/plot.png stats/projection.png stats/word_stats.csv updates.json index.html next.html
           branch: gh-pages
