@@ -96,6 +96,7 @@ tr:nth-child(even) {background-color: #f2f2f2;}
 </style>
 <body>
 
+<p><a href="../">top</a></p>
 <h2>Ascendence of a Bookworm Predicted Release Dates</h2>
 
 <table>
@@ -258,7 +259,6 @@ td, th {
 tr:nth-child(even) {background-color: #f2f2f2;}
 </style>
 <body>
-<p><a href="../">top</a></p>
 <h2>Ascendence of a Bookworm Releases</h2>
 <p><a href="stats">Weekly Statistics</a></p>
 <p><a href="next.html">Future Volume Release Day Estimates</a></p>
