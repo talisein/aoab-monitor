@@ -19,13 +19,13 @@ struct volume
 
     auto operator<=>(const volume& other) const {
         auto res = legacy_id <=> other.legacy_id;
-        if (res == std::strong_ordering::equal) {
+        if (std::is_eq(res)) {
             return slug <=> other.slug;
         }
         return res;
     };
 
-        std::string get_short() const; /* P1V1 */
+    std::string get_short() const; /* P1V1 */
     std::string get_series_part() const; /* Part 1 */
     std::string get_volume_part() const; /* */
     int get_volume_number() const; /* 1 */

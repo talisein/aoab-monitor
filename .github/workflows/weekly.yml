@@ -48,6 +48,16 @@ jobs:
           gnuplot ../projection.plt > projection.png
           cd ..
 
+      - name: Save .dat
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: gnuplot_dats
+          path: |
+            plotdata/*
+          if-no-files-found: ignore
+          retention-days: 7
+
       - uses: stefanzweifel/git-auto-commit-action@v4
         id: auto-commit-main-action
         with:

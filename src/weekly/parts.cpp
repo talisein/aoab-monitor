@@ -74,6 +74,9 @@ write_gnuplot(historic_word_stats &wordstats, const std::filesystem::path& dir)
     auto prev_volume = *std::next(wordstats.volumes.crbegin());
     auto cur_volume = *wordstats.volumes.crbegin();
 
+    std::cout << "Previous volume is " << prev_volume << '\n';
+    std::cout << "Current  volume is " << cur_volume << '\n';
+
     wordstats.write_histogram_volume_points(prev_volume, dir / "latest-1.dat");
     wordstats.write_volume_word_average(prev_volume, dir / "latest-1-avg-1.dat");
 
