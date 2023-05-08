@@ -24,8 +24,10 @@ jobs:
 
       - name: Install deps
         run: |
+          sudo add-apt-repository -n ppa:talisein/libxml++5.0
+          sudo add-apt-repository -n ppa:talisein/libboost-ext-ut
           sudo apt-get update
-          sudo apt-get install meson g++-12 ninja-build libprotobuf-dev protobuf-compiler libcurl4-openssl-dev
+          sudo apt-get install meson g++-12 ninja-build libprotobuf-dev protobuf-compiler libcurl4-openssl-dev libxml2-dev libhowardhinnant-date-dev libxml++5.0-dev libboost-ext-ut-dev
 
       # Runs a set of commands using the runners shell
       - name: Configure

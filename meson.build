@@ -38,7 +38,7 @@ libxmlpp_dep = dependency('libxml++-5.0',
                                             'validation=false',
                                             'maintainer-mode=false'])
 
-date_dep = dependency('date',
+date_dep = dependency('date', 'howardhinnant-date',
                       fallback: ['hinnant-date', 'tz_dep'],
                       default_options: ['use_system_tzdb=true'])
 
