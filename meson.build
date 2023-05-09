@@ -39,6 +39,7 @@ libxmlpp_dep = dependency('libxml++-5.0',
                                             'maintainer-mode=false'])
 
 date_dep = dependency('date', 'howardhinnant-date',
+                      modules: 'howardhinnant-date::howardhinnant-date-tz',
                       fallback: ['hinnant-date', 'tz_dep'],
                       default_options: ['use_system_tzdb=true'])
 
@@ -46,7 +47,5 @@ boostut_dep = dependency('ut',
                          method: 'cmake',
                          modules: 'Boost::ut',
                          fallback: ['boostut', 'boostut_dep'])
-
-add_project_arguments('-DBOOST_UT_DISABLE_MODULE', language: 'cpp')
 
 subdir('src')
