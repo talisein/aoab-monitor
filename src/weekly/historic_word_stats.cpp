@@ -3,9 +3,11 @@
 #include <algorithm>
 #include <concepts>
 #include <ranges>
+#include <cmath>
 
 #include "facts.h"
 #include "utils.h"
+#include "model.h"
 
 namespace {
 constexpr auto BUCKET_SIZE{500};
@@ -268,27 +270,37 @@ historic_word_stats::write_projection(std::string_view cur_volume,
 
     word_count_t current_last_part_words = get_volume_last_part_words(
         cur_volume);
-    int current_last_part = get_volume_last_part(cur_volume);
+    const int current_last_part = get_volume_last_part(cur_volume);
+    if (current_last_part == current_total_parts)
+        return; // Nothing to predict
     word_count_t current_total_words = get_volume_total_words(cur_volume);
-    word_count_t previous_total_words = get_volume_total_words(prev_volume);
+    const auto current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
 
-    if (current_last_part < current_total_parts &&
-        current_total_words < previous_total_words) {
-        const auto current_jp_pages = aoab_facts::jp_page_lengths.at(
-            cur_volume);
-        const auto previous_jp_pages = aoab_facts::jp_page_lengths.at(
-            prev_volume);
-        const auto ratio = current_jp_pages / previous_jp_pages;
-        ofs << current_last_part << '\t' << current_last_part_words << '\n';
-        const int word_deficit = static_cast<int>(previous_total_words *
-                                                  ratio) -
-                                 current_total_words;
-        for (int i = current_last_part + 1; i <= current_total_parts; ++i) {
-            ofs << i << '\t'
-                << word_deficit / (current_total_parts - current_last_part)
-                << '\n';
-        }
+    auto model = models[current_last_part-1];
+    std::cout << "Selected model " << model << '\n';
+    std::cout << "current_total_words=" << current_total_words << ", jp_pages=" << current_jp_pages << '\n';
+    const auto predicted_total_words = model.predict(current_total_words, current_jp_pages);
+    const auto word_deficit = predicted_total_words - current_total_words;
+    const auto remaining_parts = current_total_parts - current_last_part;
+    const auto predicted_words_per_part = word_deficit / remaining_parts;
+    std::cout << "Predicting\ttotal_words=" << predicted_total_words << ",\tword_deficit="
+              << word_deficit << ",\twords_per_part=" << predicted_words_per_part << '\n';
+    ofs << current_last_part << '\t' << current_last_part_words << '\n';
+    for (int i = current_last_part + 1; i <= current_total_parts; ++i) {
+        ofs << i << '\t' << predicted_words_per_part << '\n';
     }
+
+
+    /* Old model */
+    const auto previous_jp_pages = aoab_facts::jp_page_lengths.at(prev_volume);
+    const auto ratio = current_jp_pages / previous_jp_pages;
+    word_count_t previous_total_words = get_volume_total_words(prev_volume);
+    std::cout << "Previously we would have predicted\n\t\ttotal_words="
+              << previous_total_words * ratio << ",\tword_deficit="
+              << static_cast<int>(previous_total_words * ratio) - current_total_words
+              << ",\twords_per_part="
+              << (static_cast<int>(previous_total_words * ratio) - current_total_words) / remaining_parts
+              << '\n';
 }
 
 void
