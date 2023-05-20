@@ -17,8 +17,8 @@ struct model
         constexpr arith_t page_avg {389.7894737};
         constexpr arith_t page_stdev {24.55510571};
 
-        const arith_t normalized_pages = (page_avg - static_cast<arith_t>(jp_pages)) / page_stdev;
-        const arith_t normalized_words = (words_avg - static_cast<arith_t>(available_words)) / words_stdev;
+        const arith_t normalized_pages = (static_cast<arith_t>(jp_pages) - page_avg) / page_stdev;
+        const arith_t normalized_words = (static_cast<arith_t>(available_words) - words_avg) / words_stdev;
         std::cout << "normalized_words=" << normalized_words << ", normalized_pages=" << normalized_pages << '\n';
 
         auto res = normalized_words * available_words_slope +
