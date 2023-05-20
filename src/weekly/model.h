@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <iostream>
 
 struct model
 {
@@ -9,22 +10,32 @@ struct model
     arith_t jp_pages_slope;
     arith_t intercept;
 
+    arith_t words_avg;
+    arith_t words_stdev;
+
     auto predict(auto available_words, auto jp_pages) -> decltype(available_words) {
-        auto res = available_words * available_words_slope +
-            jp_pages * jp_pages_slope +
+        constexpr arith_t page_avg {389.7894737};
+        constexpr arith_t page_stdev {24.55510571};
+
+        const arith_t normalized_pages = (page_avg - static_cast<arith_t>(jp_pages)) / page_stdev;
+        const arith_t normalized_words = (words_avg - static_cast<arith_t>(available_words)) / words_stdev;
+        std::cout << "normalized_words=" << normalized_words << ", normalized_pages=" << normalized_pages << '\n';
+
+        auto res = normalized_words * available_words_slope +
+            normalized_pages * jp_pages_slope +
             intercept;
         return std::lround(res);
     }
 };
 
 constexpr auto models = std::to_array<model>({
-        {1, 0.2633081167, 244.5488742, 0},
-        {2, 0.6251473025, 214.4604813, 0},
-        {3, 0.3274302394, 222.2450806, 0},
-        {4, 0.3394691099, 210.5438255, 0},
-        {5, 0.3406427501, 198.9480125, 0},
-        {6, 0.518256393, 154.7629059, 0},
-        {7, 0.6612492242, 106.0296633, 0}
+        {1, 1082.655035, 7066.789665, 98336.89474, 11777.26316, 1715.418506},
+        {2, 1991.503033, 6177.234192, 98336.89474, 23693.42105, 2948.079155},
+        {3, 1538.934884, 6569.669045, 98336.89474, 36045.36842, 3220.923301},
+        {4, 1756.461543, 6197.883029, 98336.89474, 48183.31579, 4094.773078},
+        {5, 1890.534914, 5896.735764, 98336.89474, 61261.15789, 5079.944272},
+        {6, 2925.338454, 4808.437858, 98336.89474, 73457.0,     6053.697539},
+        {7, 4135.783294, 3641.93821,  98336.89474, 86294.63158, 6640.38053 }
     });
 
 std::ostream& operator<<(std::ostream& os, const model& m)
