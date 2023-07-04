@@ -38,7 +38,7 @@ public:
     bool contains(T &&id) { return wordstats.contains(std::forward<T>(id)); }
 
     template<typename... Types>
-    void emplace(Types&&... Ts) { auto [it, inserted] = wordstats.emplace(std::forward<Types>(Ts)...); modified = modified || inserted; }
+    void emplace(Types&&... Ts) { auto [it, inserted] = wordstats.emplace(std::forward<Types>(Ts)...); modified = modified || inserted; if (inserted) { volumes.insert(it->first.get_short()); } }
 
     void write(std::filesystem::path filename);
     void write(std::ostream &os);
