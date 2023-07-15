@@ -67,7 +67,7 @@ jobs:
           # email subject
           subject: 'AOAB-Monitor: epub update'
           # email body as text
-          body: ${{ github.repository }} sees an update. https://aoabmonitor.talinet.net/index.html
+          body: ${{ github.repository }} sees an update. https://github.com/talisein/aoab-monitor/commit/${{ steps.auto-commit-action.outputs.commit_hash }}
           # comma-separated string, send email to
           to: ${{ secrets.NOTIFY_EMAIL }}
           # from email name
