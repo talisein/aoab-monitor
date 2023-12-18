@@ -72,12 +72,25 @@ How accurate is my model?
 
 This graph shows a few things, so lets break it down:
 
-    1. The red line shows the average correlation of JP Page Count to English Words
-    2. The curved purple lines show roughly how confident you should be in the average. P1V3 was 463 pages which is miles more than any other volume, so the confidence is lower out there than the cluster around 390 pages.
-    3. The red dots represent the model's prediction for each volume.
-    4. The green dots represent the reality, e.g. P5V8 was 397 JP pages had 90231 English words.
-       * Let's take a moment to consider P2V4 and P5V7. Both of these had 375 JP Pages. The English word counts were 92279 and 88354 respectively, a difference of 4000 words.
-       * A 4000 words difference represents about a 4.5% change. That doesn't seem so large, but:
-       * The average weekly release is about 12000 words. If you are expecting the last part to be 12000, getting 8000 will feel extrodinarily short. Conversely 16000 would be a huge release.
+1. The red line shows the average correlation of JP Page Count to English Words.
+2. The curved purple lines show roughly how confident you should be in the
+   average. P1V3 was 463 pages which is miles more than any other volume, so the
+   confidence is lower out there than the cluster around 390 pages.
+3. The red dots represent the model's prediction for each volume.
+4. The green dots represent the reality, e.g. P5V8 was 397 JP pages had 90231
+   English words.
 
-In conclusion, the model is not good at predicting how big any particular part will be. But it can give us a broader insight to how the volume is shaping up overall.
+Let's take a moment to consider P2V4 and P5V7. Both of these had 375 JP
+Pages. The English word counts were 92279 and 88354 respectively, a difference
+of 4000 words.
+
+A 4000 words difference represents about a 4.5% change. That doesn't seem so
+large, but:
+
+The average weekly release is about 12000 words. If you are expecting the last
+part to be 12000, getting 8000 will feel extrodinarily short. Conversely 16000
+would be a huge release.
+
+In conclusion, the model is not good at predicting how big any particular part
+will be. But it can give us a broader insight to how the volume is shaping up
+overall.
