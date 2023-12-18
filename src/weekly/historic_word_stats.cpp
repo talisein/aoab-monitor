@@ -22,7 +22,7 @@ to_bucket(std::integral auto count) -> decltype(count)
 }
 
 constexpr std::array TEN_PART_VOLUMES{std::to_array<std::string_view>(
-    {"P2V2", "P2V3", "P3V2", "P3V3", "P3V4", "P5V3"})};
+    {"P2V2", "P2V3", "P3V2", "P3V3", "P3V4", "P5V3", "P5V9"})};
 
 bool
 is_ten_part(std::string_view vol)
@@ -276,7 +276,14 @@ historic_word_stats::write_projection(std::string_view cur_volume,
     word_count_t current_total_words = get_volume_total_words(cur_volume);
     const auto current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
 
-    auto model = models[current_last_part-1];
+    auto model_view = std::views::drop(models, current_last_part - 1);
+    std::ranges::range_value_t<decltype(model_view)> model;
+    if (model_view.empty()) {
+        // Use the 8th part model for parts 9&10.
+        model = std::views::reverse(models).front();
+    } else {
+        model = model_view.front();
+    }
     std::cout << "Selected model " << model << '\n';
     std::cout << "current_total_words=" << current_total_words << ", jp_pages=" << current_jp_pages << '\n';
     const auto predicted_total_words = model.predict(current_total_words, current_jp_pages);
