@@ -50,10 +50,10 @@ Modeling Words Per Volume based on Japanese Page Count
 At https://aoabmonitor.talinet.net/stats/ the second graph will display a
 'projection.' The basis of the projection is based on
 
-    1. Known fact: How many English words have been published so far
-    2. Known fact: How many English parts have been released so far
-    3. Known fact (usually): How many English parts there will be
-    4. Unknown: How many English words the entire volume will have.
+1. Known fact: How many English words have been published so far.
+2. Known fact: How many English parts have been released so far
+3. Known fact (usually): How many English parts there will be
+4. Unknown: How many English words the entire volume will have.
 
 To make a guess about how many English words there will be, we can look at how
 many pages comprise each Japanese book release. That is one strong variable. A
