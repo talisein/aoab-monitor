@@ -8,6 +8,7 @@ namespace aoab_facts
     const std::map<std::string_view, page_length_t> jp_page_lengths {
         {"P1V1", 450}, // for test
         {"P1V2", 400},
+        {"P2V2", 450}, // for test
         {"P5V1", 405},
         {"P5V2", 389},
         {"P5V3", 381},

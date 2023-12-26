@@ -147,12 +147,32 @@ int main() {
 
         expect(eq(ofs.str(), R"(Part	Words	"P1V2 Projection"
 2	12410
-3	12816
-4	12816
-5	12816
-6	12816
-7	12816
-8	12816
+3	12725
+4	12725
+5	12725
+6	12725
+7	12725
+8	12725
+)"sv));
+    };
+
+    "write_projection 10 part"_test = [&] {
+        std::ispanstream is {historic_test_data};
+        historic_word_stats stats {is};
+        std::ostringstream ofs;
+        stats.write_projection("P2V2"sv, "P1V1"sv, ofs);
+
+        expect(eq(ofs.str(), R"(Part	Words	"P2V2 Projection"
+1	12249
+2	11502
+3	11502
+4	11502
+5	11502
+6	11502
+7	11502
+8	11502
+9	11502
+10	11502
 )"sv));
     };
 

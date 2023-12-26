@@ -266,14 +266,14 @@ historic_word_stats::write_projection(std::string_view cur_volume,
 {
     ofs << "Part\tWords\t\"" << cur_volume << " Projection\"\n";
 
-    const int current_total_parts = is_eight_part_slug(cur_volume) ? 8 : 10;
+    const int current_total_parts = is_eight_part(cur_volume) ? 8 : 10;
 
-    word_count_t current_last_part_words = get_volume_last_part_words(
+    const word_count_t current_last_part_words = get_volume_last_part_words(
         cur_volume);
     const int current_last_part = get_volume_last_part(cur_volume);
     if (current_last_part == current_total_parts)
         return; // Nothing to predict
-    word_count_t current_total_words = get_volume_total_words(cur_volume);
+    const word_count_t current_total_words = get_volume_total_words(cur_volume);
     const auto current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
 
     auto model_view = std::views::drop(models, current_last_part - 1);
@@ -289,6 +289,7 @@ historic_word_stats::write_projection(std::string_view cur_volume,
     const auto predicted_total_words = model.predict(current_total_words, current_jp_pages);
     const auto word_deficit = predicted_total_words - current_total_words;
     const auto remaining_parts = current_total_parts - current_last_part;
+    std::cout << "current_total_parts=" << current_total_parts << ", current_last_part=" << current_last_part << ", remaining_parts=" << remaining_parts << '\n';
     const auto predicted_words_per_part = word_deficit / remaining_parts;
     std::cout << "Predicting\ttotal_words=" << predicted_total_words << ",\tword_deficit="
               << word_deficit << ",\twords_per_part=" << predicted_words_per_part << '\n';
