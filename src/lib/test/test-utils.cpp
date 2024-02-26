@@ -18,6 +18,10 @@ int main() {
     "slug to short"_test = [&] {
         expect(eq("P5V1"sv, slug_to_short("ascendence-of-a-bookworm-part-5-volume-1-part-10"sv)));
         expect(eq("P5V10"sv, slug_to_short("ascendence-of-a-bookworm-part-5-volume-10-part-10"sv)));
+        expect(eq("P1V1"sv, slug_to_short("ascendence-of-a-bookworm-part-1"sv)));
+        expect(eq("P1V1"sv, slug_to_short("ascendence-of-a-bookworm-volume-1-part-3"sv)));
+        expect(eq("P1V2"sv, slug_to_short("ascendence-of-a-bookworm-volume-2-part-4"sv)));
+        expect(eq("P1V3"sv, slug_to_short("ascendence-of-a-bookworm-part-1-volume-3-part-5"sv)));
     };
 
     "slug to series part"_test = [&] {
