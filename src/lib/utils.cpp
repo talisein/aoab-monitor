@@ -43,14 +43,15 @@ slug_to_short(std::string_view slug)
     constexpr std::string_view delim {"-"};
     std::stringstream ss;
     std::vector<std::string_view> words;
-    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4)) {
+    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4) | std::views::take(4)) {
         words.emplace_back(std::ranges::begin(word), std::ranges::end(word));
     }
 
-    for (const auto &word : words | std::views::reverse |
-             std::views::drop(2) | std::views::reverse | std::views::take(4))
+    for (const auto &vw : words | std::views::chunk(2))
     {
-        ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*word.begin())));
+        auto it = vw.begin();
+        ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*it->begin())));
+        ss << *++it;
     }
 
     auto res = ss.str();
