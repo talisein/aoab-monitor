@@ -43,21 +43,28 @@ slug_to_short(std::string_view slug)
     constexpr std::string_view delim {"-"};
     std::stringstream ss;
     std::vector<std::string_view> words;
-    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4) | std::views::take(4)) {
+    for (const auto &word : std::views::split(slug, delim) | std::views::drop(4)) {
         words.emplace_back(std::ranges::begin(word), std::ranges::end(word));
     }
 
-    for (const auto &vw : words | std::views::chunk(2))
-    {
-        auto it = vw.begin();
-        ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*it->begin())));
-        ss << *++it;
+    auto view = words | std::views::reverse | std::views::drop(2) | std::views::reverse;
+
+    auto it = view.begin();
+    if (it == view.end()) return "P1V1";
+    ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*it->begin())));
+    it = std::next(it);
+    ss << *it;
+    it = std::next(it);
+    if (it == view.end()) {
+        auto res = ss.str();
+        if (res == "V1") return "P1V1";
+        if (res == "V2") return "P1V2";
+        return "UNKNOWN-P?V?";
     }
+    ss << static_cast<char>(std::toupper(static_cast<unsigned char>(*it->begin())));
+    ss << *std::next(it);
 
     auto res = ss.str();
-    if (res.empty()) { return "P1V1"; }
-    if (res == "V1") return "P1V1";
-    if (res == "V2") return "P1V2";
     return res;
 }
 
