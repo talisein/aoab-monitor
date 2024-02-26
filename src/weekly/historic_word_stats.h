@@ -14,6 +14,38 @@ using legacy_id_t = std::string;
 using slug_t = std::string;
 using id_map_t = std::map<legacy_id_t, slug_t>;
 
+struct volume_comparator
+{
+    inline int get_part(const std::string& str) const
+    {
+        auto v_pos = str.find('V');
+        auto part_str = str.substr(1, v_pos - 1);
+        return std::stol(part_str);
+    }
+    inline int get_volume(const std::string& str) const
+    {
+        auto v_pos = str.find('V');
+        auto volume_str = str.substr(v_pos + 1);
+        return std::stol(volume_str);
+    }
+
+    bool operator()(const std::string& left, const std::string& right) const {
+        auto left_part = get_part(left);
+        auto right_part = get_part(right);
+        auto left_volume = get_volume(left);
+        auto right_volume = get_volume(right);
+
+        if (left_part == right_part && left_volume == right_volume) {
+            return false;
+        }
+        if (left_part == right_part) {
+            return left_volume < right_volume;
+        } else {
+            return left_part < right_part;
+        }
+    }
+};
+    
 struct historic_word_stats
 {
     using word_count_t = int;
@@ -21,7 +53,7 @@ struct historic_word_stats
 
     std::map<volume, word_count_t> wordstats;
     bool modified;
-    std::set<std::string> volumes; // P1V1, P1V2, etc
+    std::set<std::string, volume_comparator> volumes; // P1V1, P1V2, etc
     std::list<word_count_t> seen_buckets_8;
     std::list<word_count_t> seen_buckets_10;
 

@@ -198,4 +198,17 @@ int main() {
 14000	1	0	0	0	0	0
 )"sv));
     };
+
+    "cur_volume p5v10"_test = [&] {
+        constexpr std::string_view test_data { R"(11918,5c8df94d4aa7a7a541cac4ce,ascendance-of-a-bookworm-part-5-volume-9-part-1
+7990,5c8dfa84a72a659641fb0110,ascendance-of-a-bookworm-part-5-volume-10-part-1
+7990,5c8dfa84a72a659641fb0110,ascendance-of-a-bookworm-part-1-volume-1-part-1
+)"};
+
+        std::ispanstream is {test_data};
+        historic_word_stats stats {is};
+        expect(eq("P5V10"sv, *stats.volumes.crbegin()));
+        expect(eq("P5V9"sv, *std::next(stats.volumes.crbegin())));
+    };
+    
 }
