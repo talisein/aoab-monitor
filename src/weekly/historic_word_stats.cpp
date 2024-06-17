@@ -274,7 +274,13 @@ historic_word_stats::write_projection(std::string_view cur_volume,
     if (current_last_part == current_total_parts)
         return; // Nothing to predict
     const word_count_t current_total_words = get_volume_total_words(cur_volume);
-    const auto current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
+
+    aoab_facts::page_length_t current_jp_pages = 400;
+    if (aoab_facts::jp_page_lengths.contains(cur_volume)) {
+        current_jp_pages = aoab_facts::jp_page_lengths.at(cur_volume);
+    } else {
+        std::cerr << "Volume " << cur_volume << " has unknown jp page length\n";
+    }
 
     auto model_view = std::views::drop(models, current_last_part - 1);
     std::ranges::range_value_t<decltype(model_view)> model;
