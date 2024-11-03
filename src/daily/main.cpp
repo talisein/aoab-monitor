@@ -19,7 +19,7 @@ fetch_library(curl& c, curlslistp& auth_header)
 {
     std::stringstream ss;
 
-    c.set_get_opts(ss, auth_header, "https://labs.j-novel.club/app/v1/me/library");
+    c.set_get_opts(ss, auth_header, "https://labs.j-novel.club/app/v2/me/library");
     auto code = c.perform();
     if (CURLE_OK != code) {
         throw std::runtime_error("Failed to fetch library_response");
