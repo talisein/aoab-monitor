@@ -26,7 +26,7 @@ std::vector<volume>
 fetch_partlist(curl& c, curlslistp& auth_header, std::string_view volume_slug)
 {
     std::stringstream url_ss;
-    url_ss << "https://labs.j-novel.club/app/v1/parts/" << volume_slug << "/toc";
+    url_ss << "https://labs.j-novel.club/app/v2/parts/" << volume_slug << "/toc";
     auto url = url_ss.str();
 
     std::stringstream ss;

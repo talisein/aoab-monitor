@@ -144,7 +144,7 @@ curl::login()
 
     curlslistp protobuf_header { curl_slist_append(nullptr, "Content-Type: application/vnd.google.protobuf") };
     setopt(CURLOPT_HTTPHEADER, protobuf_header.get());
-    setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/login");
+    setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v2/auth/login");
     auto code = perform();
     if (CURLE_OK != code) {
         throw std::runtime_error("Failed to login");
