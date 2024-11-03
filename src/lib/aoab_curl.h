@@ -90,7 +90,7 @@ struct credentials
         c.setopt(CURLOPT_HTTPHEADER, auth_header.get());
         c.setopt(CURLOPT_USERAGENT, USERAGENT.begin());
         c.setopt(CURLOPT_FAILONERROR, 1L);
-        c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v1/auth/logout");
+        c.setopt(CURLOPT_URL, "https://labs.j-novel.club/app/v2/auth/logout");
         auto code = c.perform();
         if (CURLE_OK != code ) {
             throw std::runtime_error("Failed to logout");
