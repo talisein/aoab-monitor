@@ -1,0 +1,65 @@
+name: Weekly Stats
+on:
+  schedule:
+    - cron: '15 21 * 3-10 1'
+    - cron: '5 22 * 11,12,1,2,3 1'
+  workflow_dispatch:
+
+env:
+  GIT_AUTHOR_NAME: "aoab-monitor[bot]"
+  GIT_AUTHOR_EMAIL: "aoab-monitor[bot]@git.miku"
+  GIT_COMMITTER_NAME: "aoab-monitor[bot]"
+  GIT_COMMITTER_EMAIL: "aoab-monitor[bot]@git.miku"
+
+jobs:
+  stats:
+    runs-on: meiko
+    container:
+      image: registry.fedoraproject.org/fedora:44
+    steps:
+      - name: Install deps
+        run: dnf -y install git meson gcc-c++ ninja-build cmake protobuf-devel protobuf-compiler libcurl-devel libxml2-devel libxml++50-devel gnuplot
+
+      - name: Checkout
+        run: git clone --branch ${{ github.ref_name }} https://x-access-token:${{ secrets.GITHUB_TOKEN }}@git.miku/${{ github.repository }}.git .
+
+      - name: Build
+        run: |
+          meson setup --warnlevel 3 --buildtype release _build
+          ninja -C _build
+
+      - name: Run
+        env:
+          JNC_USERNAME: ${{ secrets.JNC_USERNAME }}
+          JNC_PASSWORD: ${{ secrets.JNC_PASSWORD }}
+        run: |
+          mkdir plotdata
+          _build/src/weekly/partget data/word_stats.csv data/word_stats.csv plotdata/
+          cp data/word_stats.csv plotdata/
+          cd plotdata
+          gnuplot ../histo.plt > plot.png
+          gnuplot ../projection.plt > projection.png
+
+      - name: Commit stats to main
+        run: |
+          git add data/word_stats.csv
+          if git diff --cached --quiet; then
+            echo NO CHANGE
+          else
+            git commit -m 'Auto-update'
+            git push origin ${{ github.ref_name }}
+          fi
+
+      - name: Commit plots to gh-pages
+        run: |
+          git checkout gh-pages
+          cp plotdata/plot.png stats/plot.png
+          cp plotdata/projection.png stats/projection.png
+          cp plotdata/word_stats.csv stats/word_stats.csv
+          git add stats/plot.png stats/projection.png stats/word_stats.csv
+          if git diff --cached --quiet; then
+            echo NO CHANGE
+          else
+            git commit -m 'Auto-update'
+            git push origin gh-pages
+          fi
