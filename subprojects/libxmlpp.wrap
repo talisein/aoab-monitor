@@ -1,10 +1,10 @@
 [wrap-file]
-directory = libxml++-5.0.2
-source_url = https://download.gnome.org/sources/libxml++/5.0/libxml++-5.0.2.tar.xz
-source_fallback_url = https://ftp.acc.umu.se/pub/gnome/sources/libxml++/5.0/libxml++-5.0.2.tar.xz
-source_filename = libxml++-5.0.2.tar.xz
-source_hash = 7c17cc3e5a2214314dee5a1354f4b436f266ded6185232a0534f352a76240d5a
-wrapdb_version = 5.0.2-2
+directory = libxml++-5.6.1
+source_url = https://github.com/libxmlplusplus/libxmlplusplus/releases/download/5.6.1/libxml++-5.6.1.tar.xz
+source_filename = libxml++-5.6.1.tar.xz
+source_hash = 4996e8a73995e8a4cd656c8591dce38181146edfc30cb47c97d1db3c56990ad7
+source_fallback_url = https://wrapdb.mesonbuild.com/v2/libxmlpp_5.6.1-1/get_source/libxml++-5.6.1.tar.xz
+wrapdb_version = 5.6.1-1
 
 [provide]
-libxml++ = xmlxx_dep
+dependency_names = libxml++-5.0
