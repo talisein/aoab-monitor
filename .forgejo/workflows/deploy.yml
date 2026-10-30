@@ -1,0 +1,38 @@
+name: Deploy
+
+# Publishes the site branch to the Cloudflare Worker. Daily and Weekly deploy
+# on their own after committing; this is for the first deploy and for
+# redeploying after a hand edit to the site branch.
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: meiko
+    container:
+      image: registry.fedoraproject.org/fedora:44
+    steps:
+      - name: Install deps
+        run: dnf -y install --setopt=install_weak_deps=0 git-core nodejs-npm tar
+
+      - name: Checkout
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch ${{ github.ref_name }} https://x-access-token:${{ secrets.GITHUB_TOKEN }}@git.miku/${{ github.repository }}.git .
+          git fetch --depth 1 origin site
+
+      - name: Deploy
+        env:
+          WRANGLER_SEND_METRICS: "false"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          export COMMIT=$(git rev-parse FETCH_HEAD)
+          mkdir public
+          git archive FETCH_HEAD | tar -x -C public
+          script/deploy

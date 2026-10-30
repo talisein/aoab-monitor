@@ -1,0 +1,13 @@
+// Cloudflare Workers static assets: an assets-only Worker (no script), so
+// requests are served from Cloudflare's asset store and never invoke code.
+// Used only by script/deploy. public/ is the `site` branch, extracted by the
+// workflows. The custom domain (aoabmonitor.talinet.net) is attached in the
+// dashboard, not here, so the deploy token needs no zone permissions.
+{
+  "name": "aoab-monitor",
+  "compatibility_date": "2026-10-30",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public"
+  }
+}

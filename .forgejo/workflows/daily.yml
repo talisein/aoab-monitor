@@ -17,7 +17,7 @@ jobs:
       image: registry.fedoraproject.org/fedora:44
     steps:
       - name: Install deps
-        run: dnf -y install git meson gcc-c++ ninja-build cmake protobuf-devel protobuf-compiler libcurl-devel libxml2-devel libxml++50-devel
+        run: dnf -y install git meson gcc-c++ ninja-build cmake protobuf-devel protobuf-compiler libcurl-devel libxml2-devel libxml++50-devel nodejs-npm tar
 
       - name: Checkout
         run: git clone --branch ${{ github.ref_name }} https://x-access-token:${{ secrets.GITHUB_TOKEN }}@git.miku/${{ github.repository }}.git .
@@ -27,8 +27,14 @@ jobs:
           meson setup --warnlevel 3 --buildtype release _build
           ninja -C _build
 
-      - name: Switch to gh-pages
-        run: git checkout gh-pages
+      # script/deploy and wrangler.jsonc live on this branch, not on site
+      - name: Stage deploy tooling
+        run: |
+          mkdir _deploy
+          cp script/deploy wrangler.jsonc _deploy/
+
+      - name: Switch to site
+        run: git checkout site
 
       # updates.json is only replaced by a non-empty result; dregarnuhr reads it
       - name: Run
@@ -41,11 +47,26 @@ jobs:
           mv updates.json.new updates.json
 
       - name: Commit
+        id: commit
         run: |
           git add updates.json index.html next.html
           if git diff --cached --quiet; then
             echo NO CHANGE
           else
             git commit -m 'Auto-update'
-            git push origin gh-pages
+            git push origin site
+            echo changed=true >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Deploy
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          WRANGLER_SEND_METRICS: "false"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          export COMMIT=$(git rev-parse HEAD)
+          mkdir _deploy/public
+          git archive HEAD | tar -x -C _deploy/public
+          cd _deploy && ./deploy

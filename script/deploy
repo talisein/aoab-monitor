@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Publish the site in public/ (an extract of the `site` branch) to a static
+# host. The generators know nothing about where the site is hosted; this
+# script is the only place that does.
+#
+#   COMMIT   commit hash of the site branch, for the host's deployment log
+#
+# Run from a directory holding public/ and wrangler.jsonc.
+set -euo pipefail
+
+: "${DEPLOY_TARGET:=cloudflare-workers}"
+: "${COMMIT:=unknown}"
+
+[ -f public/updates.json ] || { echo "public/ missing or not the site branch" >&2; exit 1; }
+
+case "$DEPLOY_TARGET" in
+  cloudflare-workers)
+    # Assets-only Worker described by wrangler.jsonc. Needs
+    # CLOUDFLARE_API_TOKEN (Workers Scripts: Edit) and CLOUDFLARE_ACCOUNT_ID.
+    : "${CLOUDFLARE_API_TOKEN:?}" "${CLOUDFLARE_ACCOUNT_ID:?}"
+    exec npx --yes wrangler@4 deploy --message="$COMMIT"
+    ;;
+  *)
+    echo "unknown DEPLOY_TARGET: $DEPLOY_TARGET" >&2
+    exit 1
+    ;;
+esac

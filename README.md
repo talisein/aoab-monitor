@@ -1,20 +1,18 @@
 aoab-monitor
 ============
-[![CI](https://github.com/talisein/aoab-monitor/actions/workflows/main.yml/badge.svg)](https://github.com/talisein/aoab-monitor/actions/workflows/main.yml)
-
 This is a simple tool that queries the [J-Novel Club](https://j-novel.club) API
 and fetches all the lastUpdated fields for Ascendence of a Bookworm epubs.
 
-A github action that runs periodically with my credentials, and makes the data
-publicly available on the [gh-pages
-branch](https://aoabmonitor.talinet.net/updates.json). There's also a
-[human-readable output](https://aoabmonitor.talinet.net/).
+A [Forgejo](https://git.miku/talisein/aoab-monitor) workflow runs daily with my
+credentials and commits the results to the `site` branch, which is deployed as
+a Cloudflare Worker serving [updates.json](https://aoabmonitor.talinet.net/updates.json).
+There's also a [human-readable output](https://aoabmonitor.talinet.net/).
 
 To be precise, `https://labs.j-novel.club/app/v1/me/library` is queried, and the
 `{book.volume.slug, book.lastUpdated}` pair is collected for Ascendance of a
 Bookworm.
 
-A second github action runs weekly to populate [stats](https://aoabmonitor.talinet.net/stats).
+A second workflow runs weekly to populate [stats](https://aoabmonitor.talinet.net/stats).
 
 The output is something like
 ```json

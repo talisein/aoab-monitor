@@ -18,7 +18,7 @@ jobs:
       image: registry.fedoraproject.org/fedora:44
     steps:
       - name: Install deps
-        run: dnf -y install git meson gcc-c++ ninja-build cmake protobuf-devel protobuf-compiler libcurl-devel libxml2-devel libxml++50-devel gnuplot
+        run: dnf -y install git meson gcc-c++ ninja-build cmake protobuf-devel protobuf-compiler libcurl-devel libxml2-devel libxml++50-devel gnuplot nodejs-npm tar
 
       - name: Checkout
         run: git clone --branch ${{ github.ref_name }} https://x-access-token:${{ secrets.GITHUB_TOKEN }}@git.miku/${{ github.repository }}.git .
@@ -27,6 +27,12 @@ jobs:
         run: |
           meson setup --warnlevel 3 --buildtype release _build
           ninja -C _build
+
+      # script/deploy and wrangler.jsonc live on this branch, not on site
+      - name: Stage deploy tooling
+        run: |
+          mkdir _deploy
+          cp script/deploy wrangler.jsonc _deploy/
 
       - name: Run
         env:
@@ -50,9 +56,10 @@ jobs:
             git push origin ${{ github.ref_name }}
           fi
 
-      - name: Commit plots to gh-pages
+      - name: Commit plots to site
+        id: commit
         run: |
-          git checkout gh-pages
+          git checkout site
           cp plotdata/plot.png stats/plot.png
           cp plotdata/projection.png stats/projection.png
           cp plotdata/word_stats.csv stats/word_stats.csv
@@ -61,5 +68,19 @@ jobs:
             echo NO CHANGE
           else
             git commit -m 'Auto-update'
-            git push origin gh-pages
+            git push origin site
+            echo changed=true >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Deploy
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          WRANGLER_SEND_METRICS: "false"
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          export COMMIT=$(git rev-parse HEAD)
+          mkdir _deploy/public
+          git archive HEAD | tar -x -C _deploy/public
+          cd _deploy && ./deploy
